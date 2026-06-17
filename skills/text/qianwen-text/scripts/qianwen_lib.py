@@ -633,7 +633,7 @@ def build_source_config(script_file: str | None = None) -> str | None:
         if m:
             agent, skill = m.group(1) or "default", m.group(2)
             if len(agent) <= 32 and len(skill) <= 32:
-                return json.dumps({"channel": "qianwen-skill", "tags": {"t1": skill, "t2": agent}}, separators=(',', ':'))
+                return json.dumps({"channel": "qianwenai-skill", "tags": {"t1": skill, "t2": agent}}, separators=(',', ':'))
     return None
 
 
