@@ -1,6 +1,6 @@
 # Qwen Audio TTS — API Supplementary Guide
 
-> **Content validity**: 2026-03 | **Sources**: [TTS API](https://platform.qianwenai.com/docs/api-reference/speech-synthesis/qwen-tts) · [TTS Guide](https://platform.qianwenai.com/docs/developer-guides/speech/tts) · [Voice List](https://platform.qianwenai.com/docs/api-reference/speech-synthesis/voice-list)
+> **Content validity**: 2026-08 | **Sources**: [TTS API](https://platform.qianwenai.com/docs/api-reference/speech-synthesis/qwen-tts) · [TTS Guide](https://platform.qianwenai.com/docs/developer-guides/speech/tts) · [Voice List](https://platform.qianwenai.com/docs/api-reference/speech-synthesis/voice-list) · [TTS Models](https://platform.qianwenai.com/docs/developer-guides/speech/tts-models)
 
 ---
 
@@ -16,6 +16,10 @@ Text-to-speech synthesis service that produces natural, human-like voices. Suppo
 |----------|------------------|-------|
 | General speech synthesis / announcements | `qwen3-tts-flash` | Fast, multi-language, billed per character. |
 | Audiobooks / game dubbing / radio dramas | `qwen3-tts-instruct-flash` | Control emotion, rate, and character via `instructions`. |
+| High-quality professional TTS | `qwen-audio-3.0-tts-plus` | Instruction control, voice cloning, multi-language. |
+| Low-latency real-time interaction | `qwen-audio-3.0-tts-flash` | Instruction control, voice cloning, optimized for speed. |
+| High-performance multi-language TTS | `cosyvoice-v3.5-flash` | Instruction control, 11 languages. Custom voices only. |
+| Ultra-expressive multi-language TTS | `cosyvoice-v3.5-plus` | Instruction control, 11 languages. Custom voices only. |
 | Brand voice customization (from text description) | `qwen3-tts-vd-2026-01-26` | Design a new voice from a text description without audio samples. |
 | Brand voice customization (from audio sample) | `qwen3-tts-vc-2026-01-22` | Clone a voice from audio samples with high fidelity. |
 | Navigation / notifications | `qwen3-tts-flash` | Short text, high frequency, low cost. |
@@ -70,6 +74,14 @@ resp = dashscope.MultiModalConversation.call(
     optimize_instructions=True,
 )
 ```
+
+### Instruction Control (CosyVoice v3.5 / Qwen-Audio-TTS)
+
+CosyVoice v3.5 and Qwen-Audio-TTS models support free-style instruction control via the `instruction` parameter (note: singular, not plural). Use natural language to describe dialect, emotion, pace, or character.
+
+> **⚠️ v3.5 models** (`cosyvoice-v3.5-flash`, `cosyvoice-v3.5-plus`) do **NOT** support system voices. You must provide a custom voice ID created via Voice Cloning or Voice Design.
+
+> **Supported models for `instruction`**: `cosyvoice-v3.5-plus`, `cosyvoice-v3.5-flash`, `cosyvoice-v3-flash`, `qwen-audio-3.0-tts-plus`, `qwen-audio-3.0-tts-flash`.
 
 ### System Voice List
 
@@ -126,8 +138,21 @@ resp = dashscope.MultiModalConversation.call(
 | `voice` | Yes | System voice ID, or cloned/designed voice name. |
 | `language_type` | No | Default: `Auto`. Specifying the exact language significantly improves synthesis quality over `Auto`. Supported: `Chinese`, `English`, `Japanese`, `Korean`, `French`, `German`, `Russian`, `Italian`, `Spanish`, `Portuguese`. |
 | `instructions` | No | Natural language instructions for speech control. Max 1,600 tokens. Chinese and English only. **Qwen3-TTS-Instruct-Flash only.** |
-| `optimize_instructions` | No | When true, the system semantically enhances `instructions` for better naturalness. Requires `instructions` to be set. |
+| `optimize_instructions` | No | When true, the system semantically enhances `instructions` for better naturalness. Requires `instructions` to be set. Default: false. |
 | `stream` | No | `false` = returns audio URL. `true` = streams Base64-encoded audio chunks. |
+
+### Key Parameters (CosyVoice v3.5 / Qwen-Audio-TTS NRT — `HttpSpeechSynthesizer`)
+
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `model` | Yes | Model ID: `cosyvoice-v3.5-flash`, `cosyvoice-v3.5-plus`, `qwen-audio-3.0-tts-plus`, `qwen-audio-3.0-tts-flash`, `cosyvoice-v3-flash`, `cosyvoice-v3-plus` |
+| `text` | Yes | Text to synthesize. Max 20,000 characters per call. |
+| `voice` | Yes | Voice ID (model-specific). See [Qwen-Audio-TTS voice list](https://platform.qianwenai.com/docs/api-reference/speech-synthesis/qwen-audio-tts/voice-list) and [CosyVoice voice list](https://platform.qianwenai.com/docs/api-reference/speech-synthesis/cosyvoice/voice-list). |
+| `instruction` | No | Free-style natural language instruction for speech control (dialect, emotion, pace, character). Supported by v3.5 and Qwen-Audio-TTS models. |
+| `language_hints` | No | Target language hint list, e.g. `["zh"]`. Supported: `zh`, `en`, `fr`, `de`, `ja`, `ko`, `ru`, `pt`, `th`, `id`, `vi`, `es`, `it`, `ms`, `fil`, `ar`. |
+| `format` | No | Audio format: `mp3` (default), `wav`, `pcm`, `opus`. |
+| `sample_rate` | No | Sample rate (Hz): 8000, 16000, 22050 (default), 24000, 44100, 48000. |
+| `stream` | No | `false` = returns audio URL. `true` = streams audio data chunks via iterator. |
 
 ---
 
@@ -147,6 +172,12 @@ resp = dashscope.MultiModalConversation.call(
 
 **Q: How do I choose between qwen3-tts-flash and qwen3-tts-instruct-flash?**
 A: Use flash for straightforward synthesis (announcements, navigation, reading aloud). Use instruct-flash when you need to control emotion, tone, and character expressiveness (audiobooks, dubbing). For the latest pricing comparison, see the [official pricing page](https://platform.qianwenai.com/docs/developer-guides/getting-started/pricing).
+
+**Q: What is the difference between CosyVoice v3.5 and v3?**
+A: CosyVoice v3.5 adds free-style instruction control (`instruction` parameter), reduces first-packet latency, improves pronunciation accuracy and prosody, and expands language support to 11 languages (Chinese, English, German, French, Russian, Japanese, Korean, Portuguese, Thai, Indonesian, Vietnamese). The v3.5-plus variant offers ultra-high expressiveness, while v3.5-flash prioritizes performance.
+
+**Q: How do I use CosyVoice v3.5 or Qwen-Audio-TTS for non-real-time synthesis?**
+A: Use `HttpSpeechSynthesizer.call()` from `dashscope.audio.http_tts.http_speech_synthesizer`. Set `stream=False` for a URL result, or `stream=True` for chunked audio data. See the [cosyvoice-guide.md](cosyvoice-guide.md) for full details.
 
 **Q: How do I make synthesized speech sound more natural?**
 A: (1) Set `language_type` to match the text language. (2) Use the instruct model with `instructions` describing the desired style. (3) Enable `optimize_instructions=True` to let the system enhance the instructions.

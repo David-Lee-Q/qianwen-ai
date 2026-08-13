@@ -1,6 +1,6 @@
 ---
 name: qianwen-text
-description: "[QianWen] Generate text, have conversations, write code, reason, and call functions with Qwen models. TRIGGER when: user asks to chat with Qwen, generate text, write code with Qwen, use Qwen function calling, or explicitly invokes this skill by name (e.g. use qianwen-text). DO NOT TRIGGER when: general coding questions without Qwen, non-Qwen AI model usage (OpenAI, Gemini, etc.), image/video understanding (use qianwen-vision), image/video/audio generation."
+description: "Generate text, have conversations, write code, reason, and call functions with Qwen models. TRIGGER when: user asks to chat with Qwen, generate text, write code with Qwen, use Qwen function calling, or explicitly invokes this skill by name (e.g. use qianwen-text). DO NOT TRIGGER when: general coding questions without Qwen, non-Qwen AI model usage (OpenAI, Gemini, etc.), image/video understanding (use qianwen-vision), image/video/audio generation."
 compatibility: "Requires Python 3.9+ and curl. Cursor: auto-loaded. Claude Code: read this skill's SKILL.md before first use."
 ---
 
@@ -37,21 +37,25 @@ files that may contain secrets.
 
 ## Key Compatibility
 
-Scripts require a **standard QianWen API key** (`sk-...`). Token Plan 团队版 keys (`sk-sp-...`) target a different
-endpoint (`token-plan.cn-beijing.maas.aliyuncs.com`) and are designed exclusively for interactive AI tools
-(Cursor, Claude Code, Qwen Code, OpenClaw, OpenCode, Codex, Kilo Code/CLI, Hermes Agent). They cannot be used
-by these scripts. Standard `sk-` key required. The script detects `sk-sp-` keys at startup and prints a warning.
-If qianwen-ops-auth is installed, see its `references/tokenplan.md` for details on key types, endpoint mapping,
-supported models, and error codes.
+> [!CAUTION]
+> **Token Plan keys (`sk-sp-...`) are NOT supported by this skill — using them is strictly forbidden.**
+
+Scripts require a **standard QianWen API key** (`sk-...`, pay-as-you-go). The script detects
+`sk-sp-` keys at startup and **hard-fails with `exit 1`** before any HTTP request is sent. See
+`qianwen-ops-auth/references/tokenplan.md` for details.
 
 ## Model Selection
 
 | Model              | Use Case                                                                |
 |--------------------|-------------------------------------------------------------------------|
-| `qwen3.6-plus`     | **Recommended default** — latest flagship, balanced performance/cost/speed, 1M context, thinking on by default, multimodal (text+image+video) |
+| `qwen3.8-max`      | Strongest flagship — 24T MoE, native vision-language, hybrid thinking (on by default), 1M context, built-in tools. Best for complex reasoning & coding. |
+| `qwen3.7-max`      | Flagship agent model — 1M context, thinking mode, function calling, built-in tools, structured output. |
+| `qwen3.7-plus`     | **Recommended default** — multimodal vision-language, enhanced Agent execution & coding, 1M context, thinking on by default. |
+| `qwen3.7-flash`    | Next-gen lightweight — 1M context, full features at lower cost. |
+| `qwen3.6-plus`     | Multimodal (text+image+video), 1M context, thinking on by default, strong coding & universal recognition |
 | `qwen3.5-plus`     | Balanced performance, cost, speed, 1M context, thinking on by default   |
 | `qwen3.5-flash`    | Fast, low-cost, 1M context                                              |
-| `qwen3-max`        | Strongest capability, built-in tools (web search, code interpreter)     |
+| `qwen3-max`        | Legacy strongest capability, built-in tools (web search, code interpreter) |
 | `qwen-plus`        | General purpose                                                         |
 | `qwen-turbo`       | Cheapest, low latency                                                   |
 | `qwen3-coder-next` | **Recommended code model** — best balance of quality, speed, cost; agentic coding |
@@ -67,7 +71,7 @@ supported models, and error codes.
 
 1. **User specified a model** → use directly.
 2. **Consult the qianwen-model-selector skill** when model choice depends on requirement, scenario, or pricing.
-3. **No signal, clear task** → `qwen3.6-plus` (default).
+3. **No signal, clear task** → `qwen3.7-plus` (default). For strongest reasoning/coding → `qwen3.8-max`.
 
 > Fallback: if model-selector is unavailable, the defaults in the table above apply.
 
@@ -115,7 +119,7 @@ execution.
 
 ```bash
 python3 <this-skill-dir>/scripts/text.py \
-  --request '{"messages":[{"role":"user","content":"Hello!"}],"model":"qwen3.6-plus"}' \
+  --request '{"messages":[{"role":"user","content":"Hello!"}],"model":"qwen3.7-plus"}' \
   --output output/qianwen-text/ --print-response
 ```
 
@@ -123,7 +127,7 @@ For streaming (recommended for interactive use):
 
 ```bash
 python3 <this-skill-dir>/scripts/text.py \
-  --request '{"messages":[{"role":"user","content":"Write a poem about the sea"}],"model":"qwen3.6-plus"}' \
+  --request '{"messages":[{"role":"user","content":"Write a poem about the sea"}],"model":"qwen3.7-plus"}' \
   --stream --print-response
 ```
 
@@ -135,6 +139,8 @@ python3 <this-skill-dir>/scripts/text.py \
 | `--output dir/`     | Save response JSON to directory                     |
 | `--print-response`  | Print response to stdout                            |
 | `--model ID`        | Override model (also settable in request JSON)      |
+
+> **Model priority**: `--model` CLI flag > `"model"` field in `--request` JSON > built-in default.
 
 ### Verify Result
 
@@ -175,13 +181,13 @@ in [execution-guide.md](references/execution-guide.md).
 | Field                 | Type            | Description                                                                                          |
 |-----------------------|-----------------|------------------------------------------------------------------------------------------------------|
 | `prompt` / `messages` | string \| array | User input or message list                                                                           |
-| `model`               | string          | Model ID (e.g. `qwen3.6-plus`)                                                                       |
+| `model`               | string          | Model ID (e.g. `qwen3.7-plus`)                                                                       |
 | `system`              | string          | System prompt (optional)                                                                             |
 | `temperature`         | float           | 0–2, controls randomness                                                                             |
 | `max_tokens`          | int             | Max output tokens                                                                                    |
 | `tools`               | array           | Function definitions for tool calling                                                                |
 | `stream`              | bool            | Enable streaming (recommended for interactive use)                                                   |
-| `enable_thinking`     | bool            | Enable thinking mode. **Model defaults apply**: `qwen3.6-plus`/`qwen3.5-plus`/`qwen3.5-flash` have thinking **ON by default**. Only set explicitly when user requests deep thinking or needs to disable for flash models. Adds latency for real-time tasks. |
+| `enable_thinking`     | bool            | Enable thinking mode. **Model defaults apply**: `qwen3.8-max`/`qwen3.7-max`/`qwen3.7-plus`/`qwen3.7-flash`/`qwen3.6-plus`/`qwen3.5-plus`/`qwen3.5-flash` have thinking **ON by default**. Only set explicitly when user requests deep thinking or needs to disable for flash models. Adds latency for real-time tasks. |
 
 ### Response Fields
 
@@ -216,14 +222,13 @@ For detailed usage of each feature, see [api-guide.md](references/api-guide.md) 
 | `429 Too Many Requests` | Rate limit exceeded                 | Retry with backoff                                                                         |
 | `500` / `502` / `503`   | Server error                        | Retry; check status page                                                                   |
 | `Invalid model`         | Model ID not found                  | Verify model name against Model Selection table                                            |
-| `400 product not activated` | Model/product not enabled for this account | The model has not been activated. Direct the user to **[enable the model](https://www.qianwenai.com/models)** then retry |
 | `Invalid parameter`     | Bad request body                    | Validate JSON and field types                                                              |
 | `TypeError: ...proxies` | openai SDK vs httpx incompatibility | `pip install --upgrade openai` (>=1.55.0); or use script (pure stdlib)                     |
 
 > **Usage & billing**: Use the **qianwen-usage** skill to check usage, free tier quota, and billing directly. Alternatively, the user can visit the QianWen console:
 > [Usage Analytics](https://platform.qianwenai.com/home/analytics) |
 > [Pay-as-you-go Billing](https://platform.qianwenai.com/home/billing/pay-as-you-go) |
-> [Token Plan 团队版 Subscription](https://platform.qianwenai.com/home/billing/subscription/token-plan)
+> [Token Plan Subscription](https://platform.qianwenai.com/home/billing/subscription/token-plan)
 >
 > **NEVER fabricate, guess, or construct usage/billing/console URLs.** Only provide the exact links listed in this skill. If a URL is not listed here, do not invent one.
 

@@ -114,12 +114,15 @@ Do **not** stop at "login succeeded" — the user's original question is still u
 > If the user explicitly declines to log in, only then fall back to `model-list.md` / `pricing.md`,
 > with an explicit caveat that data may be outdated.
 
-For the full authentication flow, including `sk-sp-` Token Plan 团队版 keys and headless / CI environments,
-see the **qianwen-usage** skill.
+For the full authentication flow, including headless / CI environments, see the
+**qianwen-usage** skill.
 
 > [!NOTE]
-> The `qianwen` CLI does not yet support `sk-sp-` Token Plan 团队版 keys. For Token Plan usage queries
-> (seat allowance, shared-package Credits), direct the user to the
+> Once an active CLI session is established (device-flow login — see
+> [Authentication Model](#authentication-model--important) above), the `qianwen usage` commands
+> report both pay-as-you-go usage and Token Plan seat allowance / shared-package Credits for the
+> logged-in account. For purchasing shared packages, adjusting seats, or full billing history,
+> direct the user to the
 > [Token Plan Subscription console](https://platform.qianwenai.com/home/billing/subscription/token-plan).
 
 ## Agent display rules for CLI output

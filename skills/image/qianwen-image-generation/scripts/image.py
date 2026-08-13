@@ -53,7 +53,6 @@ from image_lib import (  # noqa: E402
     extract_usage,
 )
 
-
 # ---------------------------------------------------------------------------
 # Generation calls (sync / async)
 # ---------------------------------------------------------------------------
@@ -110,6 +109,14 @@ def _call_generate_async(req: dict[str, Any], api_key: str) -> dict[str, Any]:
         timeout_s=int(req.get("timeout_s", 600)),
         interval=int(req.get("poll_interval_s", 10)),
     )
+    task_status = (result.get("output") or {}).get("task_status", "")
+    if task_status != "SUCCEEDED":
+        msg = (result.get("output") or {}).get("message", "Unknown error")
+        code = (result.get("output") or {}).get("code", "")
+        error_detail = f"{code}: {msg}" if code else msg
+        print(f"Task failed ({task_status}): {error_detail}", file=sys.stderr)
+        raise RuntimeError(f"Async task failed: {task_status} -- {msg}")
+
     width, height = extract_usage(result)
 
     is_edit = is_image_edit_model(model) or is_qwen_image_edit_model(model)
@@ -159,6 +166,9 @@ def _call_i2i_async(req: dict[str, Any], api_key: str) -> dict[str, Any]:
     task_status = (result.get("output") or {}).get("task_status", "")
     if task_status != "SUCCEEDED":
         msg = (result.get("output") or {}).get("message", "Unknown error")
+        code = (result.get("output") or {}).get("code", "")
+        error_detail = f"{code}: {msg}" if code else msg
+        print(f"Task failed ({task_status}): {error_detail}", file=sys.stderr)
         raise RuntimeError(f"i2i task failed: {task_status} -- {msg}")
 
     image_urls = extract_i2i_urls(result)
@@ -191,6 +201,9 @@ def _call_t2i_async(req: dict[str, Any], api_key: str) -> dict[str, Any]:
     task_status = (result.get("output") or {}).get("task_status", "")
     if task_status != "SUCCEEDED":
         msg = (result.get("output") or {}).get("message", "Unknown error")
+        code = (result.get("output") or {}).get("code", "")
+        error_detail = f"{code}: {msg}" if code else msg
+        print(f"Task failed ({task_status}): {error_detail}", file=sys.stderr)
         raise RuntimeError(f"text2image task failed: {task_status} -- {msg}")
 
     image_urls = extract_i2i_urls(result)
@@ -356,13 +369,29 @@ examples:
         sys.exit(1)
 
     if is_i2i:
-        result = _call_i2i_async(req, api_key)
+        try:
+            result = _call_i2i_async(req, api_key)
+        except RuntimeError as e:
+            print(f"Error: {e}", file=sys.stderr)
+            sys.exit(1)
     elif is_qwen_t2i:
-        result = _call_t2i_async(req, api_key)
+        try:
+            result = _call_t2i_async(req, api_key)
+        except RuntimeError as e:
+            print(f"Error: {e}", file=sys.stderr)
+            sys.exit(1)
     elif args.async_mode:
-        result = _call_generate_async(req, api_key)
+        try:
+            result = _call_generate_async(req, api_key)
+        except RuntimeError as e:
+            print(f"Error: {e}", file=sys.stderr)
+            sys.exit(1)
     else:
-        result = _call_generate_sync(req, api_key)
+        try:
+            result = _call_generate_sync(req, api_key)
+        except RuntimeError as e:
+            print(f"Error: {e}", file=sys.stderr)
+            sys.exit(1)
 
     output_path = Path(args.output)
     image_urls = result.get("image_urls") or ([result["image_url"]] if result.get("image_url") else [])

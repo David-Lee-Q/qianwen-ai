@@ -19,7 +19,7 @@ explicitly declines.
 | `network-timeout` | Network errors, `ETIMEDOUT`, `ECONNREFUSED`, `socket hang up`, `502/503/504` | Retry once after 2s. If second attempt also fails, inform user and ask whether to retry again or fall back to snapshot. |
 | `rate-limit` | `429`, `rate limit exceeded`, `too many requests` | Inform user; direct them to [Rate Limit Console](https://platform.qianwenai.com/home/settings/monitoring/rate-limit). **Do NOT** auto-fall back — let user decide whether to wait and retry. |
 | `quota-exhausted` | `quota exhausted`, `insufficient balance`, `free tier used up`, `403` on usage | Inform user; direct them to [Billing Console](https://platform.qianwenai.com/home/billing/pay-as-you-go). **Do NOT** fall back to snapshots — snapshots have no quota information, falling back would be misleading. |
-| `permission-denied` | `403 Forbidden` on model/feature, `not subscribed`, Token Plan key (`sk-sp-...`) requesting non-Token-Plan model | Explain restriction (Token Plan 团队版 supports only 4 text models: qwen3.6-plus, glm-5, MiniMax-M2.5, deepseek-v3.2 — and 4 image models via Skill mechanism); see [recommendation-matrix.md](recommendation-matrix.md#token-plan-团队版-models) Token Plan section. Suggest an alternative model the user has access to, or recommend obtaining a standard `sk-` key for excluded modalities (video / TTS / ASR / embeddings). |
+| `permission-denied` | `403 Forbidden` on model/feature, `not subscribed`, Token Plan key (`sk-sp-...`) requesting non-Token-Plan model | Explain restriction (Token Plan supports only 4 text models: qwen3.6-plus, glm-5, MiniMax-M2.5, deepseek-v3.2 — and 4 image models via Skill mechanism); see [recommendation-matrix.md](recommendation-matrix.md#token-plan-models) Token Plan section. Suggest an alternative model the user has access to, or recommend obtaining a standard `sk-` key for excluded modalities (video / TTS / ASR / embeddings). |
 | `version-mismatch` | `unsupported flag`, `unknown subcommand`, `please upgrade` | Suggest `qianwen version --check` or run the update-check skill. After upgrade, retry original command. |
 | `other` | Unrecognized stderr output | Show the raw stderr to the user; link to [official docs](https://platform.qianwenai.com/docs/). Only after the user has seen the error and declined to debug, fall back to snapshot. |
 
@@ -77,12 +77,12 @@ Agent: [present pricing]
 
 > **Key details from the actual CLI implementation:**
 > - `--init-only` outputs JSON `{ events: [{ event, verification_url, expires_in }] }` and exits
-    >   immediately — it does **not** open the browser or poll. The Agent must open the URL itself.
+>   immediately — it does **not** open the browser or poll. The Agent must open the URL itself.
 > - `--complete` polls a pending session and outputs `{ events: [{ event: "success", ... }] }` on
-    >   success, or `{ events: [{ event: "expired" | "error", ... }] }` on failure.
+>   success, or `{ events: [{ event: "expired" | "error", ... }] }` on failure.
 > - In non-TTY environments, running `qianwen auth login` without `--init-only` / `--complete`
-    >   auto-degrades to `--init-only --format json`, so the Agent should always use the explicit
-    >   two-step flow above.
+>   auto-degrades to `--init-only --format json`, so the Agent should always use the explicit
+>   two-step flow above.
 
 > **DO NOT** in this flow: ask the user for `$DASHSCOPE_API_KEY` / `$QIANWEN_API_KEY`, prompt them to
 > "open the URL and tell me when done", or wait between Step 2 and Step 3.

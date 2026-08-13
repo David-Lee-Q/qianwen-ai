@@ -160,6 +160,8 @@ examples:
     )
     parser.add_argument("--request", help="Inline JSON: must contain 'prompt' + image/video input")
     parser.add_argument("--file", help="Path to JSON request file")
+    parser.add_argument("--model", type=str, default=None,
+                        help="Model ID (default: %s)" % DEFAULT_MODEL)
     parser.add_argument("--upload-files", action="store_true",
                         help="Upload local files to temp storage (oss://) instead of base64")
     parser.add_argument("--output", default="", help="Save result JSON to this path")
@@ -168,6 +170,12 @@ examples:
 
     api_key = require_api_key()
     req = load_request(args)
+
+    if args.model:
+        req["model"] = args.model
+    elif "model" not in req or not req.get("model"):
+        req["model"] = DEFAULT_MODEL
+
     result = reason(req, api_key, upload_files=args.upload_files)
 
     if args.output:

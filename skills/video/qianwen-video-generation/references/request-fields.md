@@ -78,3 +78,4 @@ When the user mentions audio/voice/music/sound for video, clarify the source:
 - **kf2v**: Silent only. For audio, switch to wan2.6-i2v or add post-generation — see [workflows.md](workflows.md).
 - **r2v**: wan2.6-r2v supports audio. wan2.6-r2v-flash can be forced silent.
 - **vace**: Silent only. Add audio post-generation — see [workflows.md](workflows.md).
+- **happyhorse-1.1**: All modes (t2v/i2v/r2v) output **with audio** by default.

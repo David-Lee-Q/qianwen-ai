@@ -15,5 +15,5 @@
 | Context cache | https://platform.qianwenai.com/docs/developer-guides/text-generation/context-cache |
 | Usage analytics | https://platform.qianwenai.com/home/analytics |
 | Pay-as-you-go billing | https://platform.qianwenai.com/home/billing/pay-as-you-go |
-| Token Plan 团队版 Subscription | https://platform.qianwenai.com/home/billing/subscription/token-plan |
-| Token Plan 团队版 Pricing | https://platform.qianwenai.com/docs/token-plan/overview#%E5%A5%97%E9%A4%90%E4%B8%8E%E5%AE%9A%E4%BB%B7 |
+| Token Plan Subscription | https://platform.qianwenai.com/home/billing/subscription/token-plan |
+| Token Plan Pricing | https://platform.qianwenai.com/docs/token-plan/overview#%E5%A5%97%E9%A4%90%E4%B8%8E%E5%AE%9A%E4%BB%B7 |

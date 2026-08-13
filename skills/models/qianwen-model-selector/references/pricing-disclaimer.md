@@ -31,7 +31,7 @@ console page (these are **NOT** accessible via API; the user must open them in a
 |---------------------------------------------------------|--------------|
 | "How much have I used?" / "Show my usage"               | [Usage Analytics](https://platform.qianwenai.com/home/analytics) |
 | "Show my bill" / "How much did I spend?" (pay-as-you-go)| [Pay-as-you-go Billing](https://platform.qianwenai.com/home/billing/pay-as-you-go) |
-| "Show my Token Plan bill" / "Token Plan 团队版 usage"    | [Token Plan Subscription](https://platform.qianwenai.com/home/billing/subscription/token-plan) |
+| "Show my Token Plan bill" / "Token Plan usage"    | [Token Plan Subscription](https://platform.qianwenai.com/home/billing/subscription/token-plan) |
 
 > **Important**: This skill can estimate costs based on published unit prices, but **cannot** query the user's
 > actual account balance, historical spending, or remaining quota. For real-time account data, always direct
@@ -55,7 +55,7 @@ This applies regardless of language or response format.
 ### Required disclaimer (Chinese response)
 
 > ⚠️ **费用说明**：以上费用为基于官方公示单价的预估价格，仅供参考。实际费用受 Token
-> 消耗量、上下文长度阶梯定价、Batch/缓存折扣及计费策略调整等因素影响，请以QianWen控制台的实际账单为准：[按量付费账单](https://platform.qianwenai.com/home/billing/pay-as-you-go) | [Token Plan 团队版订阅](https://platform.qianwenai.com/home/billing/subscription/token-plan) | [用量分析](https://platform.qianwenai.com/home/analytics)。部分模型可能提供限时免费额度，但免费额度的可用性、额度量及有效期随时可能调整，请在控制台确认您的账户是否仍有剩余额度，**切勿假设本次调用免费**。最新定价详见 [模型定价页](https://platform.qianwenai.com/docs/developer-guides/getting-started/pricing)。
+> 消耗量、上下文长度阶梯定价、Batch/缓存折扣及计费策略调整等因素影响，请以QianWen控制台的实际账单为准：[按量付费账单](https://platform.qianwenai.com/home/billing/pay-as-you-go) | [Token Plan 订阅](https://platform.qianwenai.com/home/billing/subscription/token-plan) | [用量分析](https://platform.qianwenai.com/home/analytics)。部分模型可能提供限时免费额度，但免费额度的可用性、额度量及有效期随时可能调整，请在控制台确认您的账户是否仍有剩余额度，**切勿假设本次调用免费**。最新定价详见 [模型定价页](https://platform.qianwenai.com/docs/developer-guides/getting-started/pricing)。
 
 ### Required disclaimer (English response)
 
@@ -66,7 +66,7 @@ This applies regardless of language or response format.
 > verify your remaining quota in
 > the [QianWen console](https://platform.qianwenai.com/home/benefits) and refer to your actual
 > bill for definitive costs: [Pay-as-you-go Billing](https://platform.qianwenai.com/home/billing/pay-as-you-go) |
-> [Token Plan 团队版 Subscription](https://platform.qianwenai.com/home/billing/subscription/token-plan) |
+> [Token Plan Subscription](https://platform.qianwenai.com/home/billing/subscription/token-plan) |
 > [Usage Analytics](https://platform.qianwenai.com/home/analytics).
 > See [Model Pricing](https://platform.qianwenai.com/docs/developer-guides/getting-started/pricing) for
 > the latest rates.

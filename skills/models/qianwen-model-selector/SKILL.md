@@ -1,6 +1,6 @@
 ---
 name: qianwen-model-selector
-description: "[QianWen] Recommend the best Qwen model and parameters. TRIGGER when: choosing between Qwen models, comparing Qwen model pricing, understanding Qwen model capabilities, checking usage or billing, viewing cost history, when an execution skill needs model selection advice, or user explicitly invokes this skill by name (e.g. use qianwen-model-selector). DO NOT TRIGGER when: non-Qwen model discussions (OpenAI, Gemini, etc.), general AI questions unrelated to Qwen."
+description: "Recommend the best Qwen model and parameters. TRIGGER when: choosing between Qwen models, comparing Qwen model pricing, understanding Qwen model capabilities, checking usage or billing, viewing cost history, when an execution skill needs model selection advice, or user explicitly invokes this skill by name (e.g. use qianwen-model-selector). DO NOT TRIGGER when: non-Qwen model discussions (OpenAI, Gemini, etc.), general AI questions unrelated to Qwen."
 compatibility: "Advisory skill, no execution dependencies. Cursor: auto-loaded. Claude Code: read this skill's SKILL.md before first use."
 ---
 
@@ -26,7 +26,7 @@ Load on demand. Do not fetch external URLs unless the user explicitly asks for t
 |-------------------------------------------|----------------------------------------------------------------------------------|
 | `references/cli-usage.md`                 | **CLI-first data strategy**: when to use CLI, 3-step login flow, display rules   |
 | `references/error-handling.md`            | CLI error classification & recovery actions (auth, not-found, network, ...)      |
-| `references/recommendation-matrix.md`     | Full model recommendation tables, Cross-Skill Resolution, Token Plan 团队版, Thinking |
+| `references/recommendation-matrix.md`     | Full model recommendation tables, Cross-Skill Resolution, Token Plan, Thinking |
 | `references/pricing-disclaimer.md`        | Pricing guidance + **mandatory** cost-estimation disclaimer (CN/EN) + console links |
 | `references/pricing.md`                   | Pricing structural overview (offline snapshot)                                   |
 | `references/model-list.md`                | Model catalog (offline snapshot)                                                 |
@@ -100,15 +100,16 @@ OCR, role-play, image editing, etc.) and per-domain comparison, see
 
 | Domain              | Default          | Quality          | Speed              | Cost               |
 |---------------------|------------------|------------------|--------------------|--------------------|
-| text.chat           | qwen3.6-plus     | qwen3-max        | qwen3.5-flash      | qwen-turbo         |
+| text.chat           | qwen3.8-max      | qwen3.8-max      | qwen3.7-flash      | qwen-turbo         |
+| text.chat (balanced)| qwen3.7-plus     | qwen3.7-max      | qwen3.7-flash      | qwen3.7-flash      |
 | vision.analyze      | qwen3.6-plus     | qwen3-vl-plus    | qwen3-vl-flash     | qwen3-vl-flash     |
 | omni (voice+vision) | qwen3-omni-flash | qwen3-omni-flash | qwen3-omni-flash   | —                  |
 | image.generate      | wan2.6-t2i       | wan2.6-t2i       | wan2.2-t2i-flash   | wan2.2-t2i-flash · z-image-turbo (open-source) |
 | image.edit          | wan2.6-image     | wan2.6-image     | wan2.5-i2i-preview | wan2.5-i2i-preview |
-| video.t2v           | wan2.6-t2v       | wan2.6-t2v       | —                  | —                  |
-| video.i2v           | wan2.6-i2v-flash | wan2.6-i2v       | wan2.6-i2v-flash   | —                  |
+| video.t2v           | wan2.7-t2v       | wan2.7-t2v       | happyhorse-1.1-t2v | —                  |
+| video.i2v           | wan2.7-i2v       | wan2.7-i2v       | happyhorse-1.1-i2v | —                  |
 | video.edit          | wan2.7-videoedit | wan2.7-videoedit | happyhorse-1.0-video-edit | —           |
-| audio.tts           | qwen3-tts-flash  | cosyvoice-v3-plus| qwen3-tts-flash    | qwen3-tts-flash    |
+| audio.tts           | qwen-audio-3.0-tts-plus | qwen-audio-3.0-tts-plus | cosyvoice-v3.5-flash | qwen3-tts-flash |
 
 > **Degradation**: If this skill is not loaded, each execution skill falls back to its own built-in
 > default. This protocol is purely additive — it enhances model selection but never blocks execution.
@@ -124,11 +125,13 @@ OCR, role-play, image editing, etc.) and per-domain comparison, see
 >    calls, not CLI session. See [Security & Credential Model](#security--credential-model) above.
 > 4. **DO NOT** silently fall back to snapshots.
 >
-> **Token Plan 团队版 (`sk-sp-` keys)**: The `qianwen` CLI does not yet support querying Token Plan
-> seat allowances or shared-package Credits. For Token Plan usage queries, direct the user to the
+> **Token Plan (`sk-sp-` keys)**: Once an active CLI session is established (device-flow login),
+> `qianwen usage` commands report both pay-as-you-go usage and Token Plan seat allowance /
+> shared-package Credits for the logged-in account. For purchasing shared packages, adjusting
+> seats, or full billing history, direct the user to the
 > [Token Plan Subscription console](https://platform.qianwenai.com/home/billing/subscription/token-plan).
-> Token Plan model availability (4 text + 4 image models) is documented in
-> [recommendation-matrix.md](references/recommendation-matrix.md#token-plan-团队版-models).
+> Token Plan model availability (text + image + video + TTS) is documented in
+> [recommendation-matrix.md](references/recommendation-matrix.md#token-plan-models).
 
 | Need                          | Command                                                          |
 |-------------------------------|------------------------------------------------------------------|
@@ -207,7 +210,7 @@ When the user asks to check for updates ("check for updates", "check version", "
 |--------------------------------------------------------------|------------------------------------------------------------------|
 | [cli-usage.md](references/cli-usage.md)                      | CLI-first strategy, 3-step login, display rules, model detail URL |
 | [error-handling.md](references/error-handling.md)            | CLI error classification & recovery                              |
-| [recommendation-matrix.md](references/recommendation-matrix.md) | Full recommendation tables, Cross-Skill Resolution, Token Plan 团队版, Thinking Mode |
+| [recommendation-matrix.md](references/recommendation-matrix.md) | Full recommendation tables, Cross-Skill Resolution, Token Plan, Thinking Mode |
 | [pricing-disclaimer.md](references/pricing-disclaimer.md)    | Pricing guidance + mandatory disclaimer + billing console links  |
 | [pricing.md](references/pricing.md)                          | Pricing structural overview (offline snapshot)                   |
 | [model-list.md](references/model-list.md)                    | Model catalog (offline snapshot)                                 |

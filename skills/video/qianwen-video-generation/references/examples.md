@@ -63,7 +63,7 @@ python3 scripts/video.py \
 ```bash
 python3 scripts/video.py \
   --request '{"function":"image_reference","prompt":"A girl walks through a forest","ref_images_url":["https://img.alicdn.com/imgextra/i1/NotRealJustExample/girl.png","https://img.alicdn.com/imgextra/i1/NotRealJustExample/forest.png"],"obj_or_bg":["obj","bg"],"size":"1280*720"}' \
-  --model wan2.1-vace-plus --print-response
+  --model wanx2.1-vace-plus --print-response
 ```
 
 ## VACE: Video Repainting
@@ -71,7 +71,7 @@ python3 scripts/video.py \
 ```bash
 python3 scripts/video.py \
   --request '{"function":"video_repainting","prompt":"A steampunk car driving through a city","video_url":"https://img.alicdn.com/imgextra/i1/NotRealJustExample/driving.mp4","control_condition":"depth","prompt_extend":false}' \
-  --model wan2.1-vace-plus --print-response
+  --model wanx2.1-vace-plus --print-response
 ```
 
 ## VACE: Video Local Edit
@@ -79,7 +79,7 @@ python3 scripts/video.py \
 ```bash
 python3 scripts/video.py \
   --request '{"function":"video_edit","prompt":"A lion in a suit drinking coffee","video_url":"https://img.alicdn.com/imgextra/i1/NotRealJustExample/cafe.mp4","mask_image_url":"https://img.alicdn.com/imgextra/i1/NotRealJustExample/mask.png","mask_frame_id":1,"mask_type":"tracking","prompt_extend":false}' \
-  --model wan2.1-vace-plus --print-response
+  --model wanx2.1-vace-plus --print-response
 ```
 
 ## VACE: Video Extension
@@ -87,7 +87,7 @@ python3 scripts/video.py \
 ```bash
 python3 scripts/video.py \
   --request '{"function":"video_extension","prompt":"A dog skateboarding, 3D cartoon","first_clip_url":"https://img.alicdn.com/imgextra/i1/NotRealJustExample/clip.mp4","prompt_extend":false}' \
-  --model wan2.1-vace-plus --print-response
+  --model wanx2.1-vace-plus --print-response
 ```
 
 ## VACE: Video Outpainting
@@ -95,5 +95,5 @@ python3 scripts/video.py \
 ```bash
 python3 scripts/video.py \
   --request '{"function":"video_outpainting","prompt":"A woman plays violin with an orchestra behind her","video_url":"https://img.alicdn.com/imgextra/i1/NotRealJustExample/violin.mp4","top_scale":1.5,"bottom_scale":1.5,"left_scale":1.5,"right_scale":1.5,"prompt_extend":false}' \
-  --model wan2.1-vace-plus --print-response
+  --model wanx2.1-vace-plus --print-response
 ```

@@ -75,8 +75,8 @@ models:
   qwen3-tts-flash                (default) Fast, multi-voice
   qwen3-tts-instruct-flash       Instruction-controlled style/emotion/pace
 
-  Note: For other TTS variants (CosyVoice, realtime streaming, etc.),
-        see https://www.qianwenai.com/models for the full catalog.
+  Note: For CosyVoice (v3.5/v3), Qwen-Audio-TTS, realtime streaming, etc.,
+        use tts_cosyvoice.py or see https://www.qianwenai.com/models.
 
 output:
   --output can be a directory (audio saved as audio.wav/mp3 inside)
@@ -112,8 +112,8 @@ examples:
                         help="Output directory or file path (default: %(default)s)")
     parser.add_argument("--print-response", action="store_true",
                         help="Print audio URL and file path JSON to stdout")
-    parser.add_argument("--model", type=str, default=DEFAULT_MODEL,
-                        help="Model ID (default: %(default)s). See epilog for model list")
+    parser.add_argument("--model", type=str, default=None,
+                        help=f"Model ID (default: {DEFAULT_MODEL}). See epilog for model list")
     parser.add_argument("--voice", type=str, default=DEFAULT_VOICE,
                         help="Voice ID (default: %(default)s)")
     args = parser.parse_args()
@@ -129,8 +129,14 @@ examples:
         print("Error: text is required.", file=sys.stderr)
         sys.exit(1)
 
+    # Model priority: CLI > request body > default
+    if args.model:
+        request["model"] = args.model
+    elif "model" not in request or not request.get("model"):
+        request["model"] = DEFAULT_MODEL
+    model = request["model"]
+
     voice = request.get("voice") or args.voice
-    model = request.get("model") or args.model
 
     input_obj: dict[str, Any] = {"text": text, "voice": voice}
     if request.get("language_type"):

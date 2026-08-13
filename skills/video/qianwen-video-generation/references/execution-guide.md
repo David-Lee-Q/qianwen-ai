@@ -74,7 +74,7 @@ r2v:
 
 vace (image_reference):
 ```json
-{"model":"wan2.1-vace-plus","input":{"function":"image_reference","prompt":"A girl walks through a forest","ref_images_url":["https://img.alicdn.com/imgextra/i1/NotRealJustExample/girl.png","https://img.alicdn.com/imgextra/i1/NotRealJustExample/forest.png"],"obj_or_bg":["obj","bg"]},"parameters":{"size":"1280*720"}}
+{"model":"wanx2.1-vace-plus","input":{"function":"image_reference","prompt":"A girl walks through a forest","ref_images_url":["https://img.alicdn.com/imgextra/i1/NotRealJustExample/girl.png","https://img.alicdn.com/imgextra/i1/NotRealJustExample/forest.png"],"obj_or_bg":["obj","bg"]},"parameters":{"size":"1280*720"}}
 ```
 
 ### Step 2 — Poll until done (repeat every 10–15s)

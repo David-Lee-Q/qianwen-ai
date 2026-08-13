@@ -42,21 +42,13 @@ from qianwen_lib import (  # noqa: E402,F401
 # ---------------------------------------------------------------------------
 
 def require_api_key() -> str:
-    """Load API key with vision-specific validation.
+    """Load API key with Vision domain tagging.
 
-    Token Plan keys (``sk-sp-...``) are rejected outright for vision models
-    rather than just warned about.
+    Token Plan keys (``sk-sp-...``) are rejected by the base layer with
+    ``sys.exit(1)``; this wrapper simply injects ``domain="Vision"`` so the
+    base-layer error message names the correct sub-skill.
     """
-    key = _require_api_key_base(script_file=__file__, domain="Vision")
-    if key.startswith("sk-sp-"):
-        print(
-            "Error: Token Plan key detected (sk-sp-...). "
-            "Vision models are not available on Token Plan.\n"
-            "Docs: https://platform.qianwenai.com/docs/token-plan/overview",
-            file=sys.stderr,
-        )
-        sys.exit(1)
-    return key
+    return _require_api_key_base(script_file=__file__, domain="Vision")
 
 # ---------------------------------------------------------------------------
 # Update-check signal (convenience)

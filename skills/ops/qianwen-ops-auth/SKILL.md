@@ -1,6 +1,6 @@
 ---
 name: qianwen-ops-auth
-description: "[QianWen] Configure authentication (API keys, endpoints). TRIGGER when: setting up QIANWEN_API_KEY, troubleshooting 401/auth errors, when another skill reports missing credentials, or user explicitly invokes this skill by name (e.g. use qianwen-ops-auth). DO NOT TRIGGER when: non-auth Qwen tasks, general API usage questions."
+description: "Configure authentication (API keys, endpoints). TRIGGER when: setting up QIANWEN_API_KEY, troubleshooting 401/auth errors, when another skill reports missing credentials, or user explicitly invokes this skill by name (e.g. use qianwen-ops-auth). DO NOT TRIGGER when: non-auth Qwen tasks, general API usage questions."
 compatibility: "Requires curl for verification. Cursor: auto-loaded. Claude Code: read this skill's SKILL.md before first use."
 ---
 
@@ -17,7 +17,7 @@ Use this skill's internal files for learning. Load references only when the user
 
 | Location | Purpose |
 |----------|---------|
-| `references/tokenplan.md` | Token Plan 团队版 vs standard key: endpoint mapping, supported models (4 text + 4 image), Credits billing, error codes |
+| `references/tokenplan.md` | Token Plan vs standard key: supported models (text, image, video, TTS), Credits billing, forbidden uses, error codes |
 | `references/custom-oss.md` | Custom OSS bucket setup for production file uploads (replaces 48h temp storage) |
 | `references/sources.md` | Console URLs, auth guide (manual lookup only) |
 | `references/agent-compatibility.md` | Agent self-check: register skills in project config for agents that don't auto-load |
@@ -60,14 +60,14 @@ Credentials are loaded in the following order (first match wins):
 
 QianWen has two mutually exclusive key types:
 
-| Key Type | Format | Purpose | Endpoint |
-|----------|--------|---------|----------|
-| **Standard (Pay-as-you-go)** | `sk-xxxxx` | API calls from scripts, apps, and tools | `dashscope.aliyuncs.com` |
-| **Token Plan (团队版)** | `sk-sp-xxxxx` | Interactive AI tools only (Cursor, Claude Code, Qwen Code, OpenClaw, OpenCode, Codex, Kilo Code/CLI, Hermes Agent) | `token-plan.cn-beijing.maas.aliyuncs.com` |
+| Key Type | Format | Purpose |
+|----------|--------|---------|
+| **Standard (Pay-as-you-go)** | `sk-xxxxx` | API calls from scripts, apps, and tools (this repo requires this form) |
+| **Token Plan** | `sk-sp-xxxxx` | **Interactive AI tools only** (Cursor, Claude Code, Qwen Code, OpenClaw, OpenCode, Codex, Kilo Code/CLI, Hermes Agent). **Forbidden** in automation scripts, backends, batch jobs, API testing tools, and workflow platforms. |
 
-All QianWen-AI/qianwen-ai execution scripts require a **standard** `sk-` key on `dashscope.aliyuncs.com`. Token Plan keys (`sk-sp-`) cannot be used by these scripts — they target a different endpoint (`token-plan.cn-beijing.maas.aliyuncs.com`) and produce `InvalidApiKey: Invalid API-key provided` on standard endpoints. Token Plan 团队版 supports only 4 text LLMs (qwen3.6-plus, glm-5, MiniMax-M2.5, deepseek-v3.2) plus 4 image generation models (qwen-image-2.0, qwen-image-2.0-pro, wan2.7-image, wan2.7-image-pro, accessed via tool Skill/extension mechanism only). Video, TTS, ASR, embedding, and other modalities are not supported.
+All QianWen-AI/qianwen-ai execution scripts require a **standard** `sk-` key. Token Plan keys (`sk-sp-`) cannot and must not be used by these scripts — they are reserved for interactive AI tools; routing automation traffic with `sk-sp-` is a policy violation that may trigger subscription suspension or key revocation. Token Plan supports a limited set of models across text, image, video, and TTS modalities. For the complete and up-to-date list of supported models, see [references/tokenplan.md](references/tokenplan.md).
 
-If the user's key starts with `sk-sp-`, guide them to obtain a standard key from the console below. See [tokenplan.md](references/tokenplan.md) for full details.
+If the user's key starts with `sk-sp-`, guide them to obtain a standard key from the console below. **Do not** suggest overriding `QWEN_BASE_URL` or any other workaround to make `sk-sp-` work with this skill suite. See [tokenplan.md](references/tokenplan.md) for full details.
 
 ### Viewing Bills
 
@@ -76,7 +76,7 @@ Use the **qianwen-usage** skill to query usage, free tier quota, and billing dir
 | Key Type | Billing Page |
 |----------|--------------|
 | Standard (Pay-as-you-go) | [Pay-as-you-go Billing](https://platform.qianwenai.com/home/billing/pay-as-you-go) |
-| Token Plan 团队版 | [Token Plan Subscription](https://platform.qianwenai.com/home/billing/subscription/token-plan) |
+| Token Plan | [Token Plan Subscription](https://platform.qianwenai.com/home/billing/subscription/token-plan) |
 | Usage analytics (Pay-as-you-go) | [Usage Analytics](https://platform.qianwenai.com/home/analytics) |
 
 > **NEVER fabricate, guess, or construct usage/billing/console URLs.** Only provide the exact links listed in this skill. If a URL is not listed here, do not invent one.
@@ -86,7 +86,7 @@ Use the **qianwen-usage** skill to query usage, free tier quota, and billing dir
 1. Open the [QianWen Console](https://platform.qianwenai.com/home/api-keys)
 2. Sign in with your QianWen account
 3. Create or copy an API key from the API Key management section
-4. Standard keys start with `sk-` (not `sk-sp-` which is Token Plan 团队版 only)
+4. Standard keys start with `sk-` (not `sk-sp-` which is Token Plan only, reserved for interactive AI tools)
 
 ## Security Best Practices
 
@@ -212,6 +212,6 @@ After the user responds:
 
 ## References
 
-- [tokenplan.md](references/tokenplan.md) — Token Plan 团队版 vs standard key: endpoints, supported models, Credits billing, error codes
+- [tokenplan.md](references/tokenplan.md) — Token Plan vs standard key: supported models, Credits billing, forbidden uses, error codes
 - [custom-oss.md](references/custom-oss.md) — Custom OSS bucket setup for production file uploads
 - [sources.md](references/sources.md) — Official documentation URLs (consoles, auth guide)

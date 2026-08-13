@@ -1,139 +1,186 @@
-# Token Plan 团队版 vs Standard API Key
+# Token Plan vs Standard API Key
 
 > Sources:
-> - https://platform.qianwenai.com/pricing/token-plan
+> - https://platform.qianwenai.com/docs/token-plan/overview
 > - https://platform.qianwenai.com/home/billing/subscription/token-plan
-> Updated: 2026-05-01
+> Updated: 2026-08-03
+
+> [!CAUTION]
+> **Agents reading this document must observe the following invariants:**
+>
+> 1. `sk-sp-` (Token Plan) keys MUST NOT be used by any automation script, backend service, batch
+>    job, or tool-to-tool integration — including every script shipped in QianWen-AI/qianwen-ai.
+> 2. Do NOT redirect requests to a Token Plan service URL. Do NOT override `QWEN_BASE_URL` for the
+>    purpose of routing an `sk-sp-` key anywhere. Do NOT construct, guess, or reconstruct a Token
+>    Plan endpoint from any source.
+> 3. Do NOT attempt to bypass the client-side hard-fail in `qianwen_lib.py` (e.g. by patching the
+>    script, monkey-patching `validate_api_key`, or editing the key prefix before the check).
+>
+> Violating any of the above will trigger **subscription suspension or API Key revocation** by the
+> platform, and in repeated cases, account-level review.
 
 ## Two Key Types
 
-千问云 has two mutually exclusive authentication systems. Mixing them produces hard-to-diagnose errors.
+QianWen exposes two mutually exclusive authentication systems. Mixing them produces hard-to-diagnose errors.
 
-| Dimension | Standard Key (Pay-as-you-go) | Token Plan 团队版 |
-|-----------|------------------------------|-------------------|
+| Dimension | Standard Key (Pay-as-you-go) | Token Plan |
+|-----------|------------------------------|------------|
 | Key format | `sk-xxxxx` | `sk-sp-xxxxx` |
-| OpenAI-compatible URL | `https://dashscope.aliyuncs.com/compatible-mode/v1` | `https://token-plan.cn-beijing.maas.aliyuncs.com/compatible-mode/v1` |
-| Anthropic-compatible URL | N/A | `https://token-plan.cn-beijing.maas.aliyuncs.com/apps/anthropic` |
-| Native DashScope URL | `https://dashscope.aliyuncs.com/api/v1` | **Not supported on text endpoints**; image generation uses dedicated `https://token-plan.cn-beijing.maas.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation` |
 | Auth header | `Authorization: Bearer <key>` | `Authorization: Bearer <key>` (NOT `x-api-key`) |
-| Supported text models | Full catalog (100+) | **4 text LLMs** (see below) |
-| Supported image models | Full catalog | **4 image models** via Skill/extension only (see below) |
-| Video / TTS / ASR / Embedding | Available | **Not supported** |
+| Supported text models | Full catalog (100+) | **7 text LLMs** (Personal) / **16 text LLMs** (Team) (see below) |
+| Supported image models | Full catalog | **4 image models**, tool-integrated only (see below) |
+| Supported video models | Full catalog | **3 video models**, tool-integrated only (see below) |
+| Supported TTS models | Full catalog | **1 TTS model**, tool-integrated only (see below) |
+| ASR / Embedding / Rerank / Translation | Available | **Not supported** |
 | Usage scope | Any API call (scripts, apps, tools) | **Interactive AI tools only** (Cursor, Claude Code, Qwen Code, OpenClaw, OpenCode, Codex, Kilo Code/CLI, Hermes Agent, etc.) |
 | Billing | Per-token consumption (CNY) | **Credits**: monthly seat allowance + shared usage packages |
 | Quota exhaustion | Continues (pay more or use prepaid balance) | **Hard fail — service paused** until next cycle or shared package purchased |
 
-> [!WARNING]
-> **Forbidden uses for `sk-sp-` Token Plan keys**: automation scripts, application backends, batch jobs,
-> API testing tools (Postman/Insomnia), workflow platforms (Dify, n8n, Coze). Violations may trigger
-> subscription suspension or API Key revocation.
+## Forbidden Uses (Strictly Enforced)
+
+The following uses of an `sk-sp-` Token Plan key are **strictly prohibited** by the platform.
+Server-side detection of a violation may result in:
+
+- **Immediate subscription suspension**;
+- **API Key revocation**;
+- In repeated cases, **account-level review and termination**.
+
+Prohibited scenarios include, but are not limited to:
+
+- Automation scripts of any kind, **including every script in QianWen-AI/qianwen-ai**.
+- Application backends, micro-services, serverless functions, workers, cron jobs.
+- Batch jobs, bulk data-processing pipelines, offline evaluations.
+- API testing tools (Postman, Insomnia, `curl`, HTTP clients embedded in IDEs).
+- Workflow / orchestration platforms (Dify, n8n, Coze, LangChain servers, etc.).
+- Any integration where the caller is not an **interactive AI tool** operating on behalf of a human.
+
+Token Plan keys are intended exclusively for interactive AI coding / chat tools (Cursor, Claude
+Code, Qwen Code, OpenClaw, OpenCode, Codex, Kilo Code/CLI, Hermes Agent). Any other usage
+constitutes a **policy violation**.
 
 ## Supported Models
 
-### Text Models (4 total)
+### Text Models (Personal: 7 / Team: 16)
 
-| Model            | Context Window | OpenAI-compat | Anthropic-compat | Notes                          |
-|------------------|---------------:|:-------------:|:----------------:|--------------------------------|
-| `qwen3.6-plus`   |             1M | ✅            | ✅               | Flagship; multimodal text+image input; thinking mode (`thinkingFormat: qwen`); built-in tools (web search, code interpreter, web fetch, image search) via Responses API |
-| `glm-5`          |           198K | ✅            | ✅               | Thinking mode supported        |
-| `MiniMax-M2.5`   |           192K | ✅            | ✅               | budgetTokens + output ≤ 32768  |
-| `deepseek-v3.2`  |           128K | ✅            | ❌ **OpenAI only** | Use `compatible-mode/v1` only  |
+**Personal version** (7 models):
+
+| Model                    | Context Window | Notes                                                    |
+|--------------------------|---------------:|----------------------------------------------------------|
+| `qwen3.8-max`            |             1M | Strongest flagship. Multimodal. Thinking mode.           |
+| `qwen3.7-max`            |             1M | Text-only. Strongest agentic coding, long-horizon.       |
+| `qwen3.7-plus`           |             1M | Multimodal vision-language. Coding, tools, productivity. |
+| `qwen3.6-flash`          |             1M | Multimodal. Fast. Vision understanding.                  |
+| `glm-5.2`               |             1M | Third party (Zhipu). Long-horizon tasks.                 |
+| `deepseek-v4-pro`        |           128K | Third party (DeepSeek). Thinking mode.                   |
+| `deepseek-v4-flash-0731` |             1M | Third party (DeepSeek). Lightweight MoE. Not Responses API. |
+
+**Team version** (additional 9 models, 16 total):
+
+| Model             | Context Window | Notes                                       |
+|-------------------|---------------:|---------------------------------------------|
+| `qwen3.6-plus`    |             1M | Multimodal text + image + video.            |
+| `deepseek-v4-flash` |         128K | Third party (DeepSeek).                     |
+| `deepseek-v3.2`   |           128K | Third party (DeepSeek).                     |
+| `kimi-k2.7-code`  |           256K | Third party (Moonshot). Coding specialist.  |
+| `kimi-k2.6`       |           256K | Third party (Moonshot).                     |
+| `kimi-k2.5`       |           256K | Third party (Moonshot).                     |
+| `glm-5.1`         |           198K | Third party (Zhipu).                        |
+| `glm-5`           |           198K | Third party (Zhipu).                        |
+| `MiniMax-M2.5`    |           192K | Third party (MiniMax).                      |
 
 ### Image Generation Models (4 total)
 
-> [!IMPORTANT]
-> Image generation models **cannot** be invoked through the text Base URL. They use a dedicated
-> multimodal-generation endpoint and must be wired up via each tool's Skill / Slash Command / Agent
-> mechanism (NOT through the standard model selector).
-
 | Model                | Notes                                                              |
 |----------------------|--------------------------------------------------------------------|
-| `qwen-image-2.0`     | Default; general-purpose; strong Chinese text rendering            |
-| `qwen-image-2.0-pro` | Higher quality, slightly slower                                    |
+| `qwen-image-2.0`     | Default; general-purpose; strong Chinese text rendering (Team only) |
+| `qwen-image-2.0-pro` | Higher quality, slightly slower (Team only)                        |
 | `wan2.7-image`       | Multi-style; returns 4 images by default                           |
 | `wan2.7-image-pro`   | Supports 4K (additional sizes: 2048×2048, 1440×2560, 2560×1440)    |
 
-Available sizes: `1024*1024` (default), `720*1280`, `1280*720`. `wan2.7-image-pro` adds 4K options above.
+### Video Generation Models (3 total)
 
-Endpoint: `POST https://token-plan.cn-beijing.maas.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation`
+| Model                | Notes                                                              |
+|----------------------|--------------------------------------------------------------------|
+| `happyhorse-1.1-t2v` | Text-to-video. 720P/1080P, 3–15s, with audio.                      |
+| `happyhorse-1.1-i2v` | Image-to-video. 720P/1080P, 3–15s, with audio.                     |
+| `happyhorse-1.1-r2v` | Reference-to-video. Multi-ref, 720P/1080P, 3–15s, with audio.      |
+
+### TTS Models (1 total)
+
+| Model                      | Notes                                                  |
+|----------------------------|--------------------------------------------------------|
+| `qwen-audio-3.0-tts-plus`  | Highest quality TTS. Multi-language + Chinese dialects. Billed per character (not per token). |
+
+Image generation, video generation, and TTS models are **not reachable from the standard text API**;
+they are integrated into interactive AI tools through each tool’s Skill / Slash Command / Agent
+mechanism and **must not** be invoked from automation scripts under any circumstance.
 
 ## Credits Billing Mechanism
 
 - **Unit**: Credits. Single-call cost depends on model, token usage, thinking mode, and tool calls.
-- **Tiers**: 标准坐席 (¥198/seat/month, 25,000 Credits) · 高级坐席 (¥698/seat/month, 100,000 Credits) · 尊享坐席 (¥1,398/seat/month, 250,000 Credits).
-- **Shared usage package**: ¥5,000 per package, 625,000 Credits, 1-month validity, expires unused.
+- **Tiers & pricing**: See [Token Plan overview](https://platform.qianwenai.com/docs/token-plan/overview).
 - **Deduction order**: seat monthly quota → shared package (nearest-expiry first) → service paused.
 - **Reset**: seat quotas reset monthly; unused credits do not roll over.
 
 Example (qwen3.6-plus single request): 8,349 input + 40,794 cached + 573 output ≈ 3.18 Credits.
 
-## Key Type × Endpoint — Expected Behavior
-
-| Key Type | Base URL | Result |
-|----------|----------|--------|
-| `sk-` | `dashscope.aliyuncs.com/...` | OK |
-| `sk-` | `token-plan.cn-beijing.maas.aliyuncs.com/...` | **`Incorrect API key provided`** — standard key rejected on Token Plan endpoint |
-| `sk-sp-` | `dashscope.aliyuncs.com/...` | **`InvalidApiKey: Invalid API-key provided`** — Token Plan key rejected on standard endpoint |
-| `sk-sp-` | `token-plan.cn-beijing.maas.aliyuncs.com/...` (via tool) | OK |
-| `sk-sp-` | `token-plan.cn-beijing.maas.aliyuncs.com/...` (via raw script/curl outside an AI tool) | **Policy violation** — may trigger suspension |
-
-## Common Errors
-
-| Error                                            | Cause                                                                              | Resolution                                                                                |
-|--------------------------------------------------|------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------|
-| `InvalidApiKey: No API-key provided`             | Key not configured, or tool used `x-api-key` header                                | Set key; switch to `Authorization: Bearer`                                                |
-| `InvalidApiKey: Invalid API-key provided`        | Standard `sk-` key used, subscription expired, key copied with whitespace          | Use `sk-sp-` Token Plan key; verify subscription status; reset key in console             |
-| `model 'xxx' not found or not supported`         | Model name typo / wrong case; model not supported on chosen protocol               | Match model ID exactly; `deepseek-v3.2` only via OpenAI-compat                            |
-| `invalid access token or token expired`          | Wrong Base URL (e.g. used another plan's endpoint)                                 | Use Token Plan Base URL listed above                                                      |
-| `Incorrect API key provided`                     | Used `dashscope.aliyuncs.com` Base URL with Token Plan key                         | Switch to `token-plan.cn-beijing.maas.aliyuncs.com` endpoint                              |
-| `Range of input length should be [1, xxx]`       | Input + history exceeds context window                                             | Start a new session, compact context, or switch to a larger-context model                 |
-| `Connection error`                               | Base URL typo or network issue                                                     | Verify Base URL spelling and connectivity                                                 |
-| `API rate limit reached`                         | Routed to shared API quota due to mis-config; or seat / shared package exhausted   | Verify provider config; check Token Plan console for usage; reset key as last resort      |
-
 ## Impact on QianWen-AI/qianwen-ai Scripts
 
-All execution scripts (`qianwen-text`, `qianwen-vision`, `qianwen-image-generation`, `qianwen-video-generation`,
-`qianwen-audio-tts`) call DashScope directly via `urllib.request` and are **not** recognized as AI tools.
-They detect `sk-sp-` keys and print a warning to stderr.
+All execution scripts (`qianwen-text`, `qianwen-vision`, `qianwen-image-generation`,
+`qianwen-video-generation`, `qianwen-audio-tts`) detect `sk-sp-` keys at startup and **hard-fail
+with `exit 1`** before any HTTP request is sent. This hard-fail is intentional and **must not be
+bypassed**: it keeps automation traffic entirely away from any Token Plan service and shields the
+user from the policy-violation consequences listed above.
 
-| Skill                       | API Type      | Works with `sk-sp-` Token Plan key? | Reason                                                                              |
-|-----------------------------|---------------|:-----------------------------------:|-------------------------------------------------------------------------------------|
-| qianwen-text                | OpenAI-compat |                  ❌                 | Standard endpoint rejects `sk-sp-`; scripts are not AI tools                        |
-| qianwen-vision              | OpenAI-compat |                  ❌                 | Same; vision models not in Token Plan list                                          |
-| qianwen-image-generation    | Native        |                  ❌                 | Standard `dashscope.aliyuncs.com` not accepted by Token Plan; image models on Token Plan need separate endpoint via tool Skill mechanism |
-| qianwen-video-generation    | Native        |                  ❌                 | Video models unavailable in Token Plan                                              |
-| qianwen-audio-tts           | Native        |                  ❌                 | TTS models unavailable in Token Plan                                                |
+| Skill                       | Works with `sk-sp-` Token Plan key? | Reason                                                      |
+|-----------------------------|:-----------------------------------:|-------------------------------------------------------------|
+| qianwen-text                |                  ❌                 | Client-side hard-fail; scripts are not interactive AI tools |
+| qianwen-vision              |                  ❌                 | Same; vision models not in Token Plan catalog               |
+| qianwen-image-generation    |                  ❌                 | Same; Token Plan image models are tool-integrated only      |
+| qianwen-video-generation    |                  ❌                 | Same; Token Plan video models are tool-integrated only      |
+| qianwen-audio-tts           |                  ❌                 | Same; Token Plan TTS models are tool-integrated only        |
 
 **Action**: Set a standard `sk-` key in `DASHSCOPE_API_KEY` when using these execution skills. The
-Token Plan `sk-sp-` key is for the AI tool itself (Cursor, Claude Code, etc.), not for backend scripts.
+`sk-sp-` Token Plan key belongs to the interactive AI tool itself (Cursor, Claude Code, etc.), not
+to this skill suite.
 
-## Cost Risk Scenarios
+## Common Errors (Key-level Diagnosis)
 
-1. **`sk-sp-` key in scripts**: 401/`Incorrect API key provided`, no charges, but confusing.
-2. **`sk-` key when user expects Token Plan coverage**: Calls succeed but incur pay-as-you-go charges.
-   Cannot detect programmatically — documentation must clarify.
-3. **`QWEN_BASE_URL` set to Token Plan endpoint with `sk-` key**: Authentication fails.
-4. **Token Plan Credits exhausted**: Hard fail, no fallback to pay-as-you-go.
+| Error                                            | Cause                                                                              | Resolution                                                                    |
+|--------------------------------------------------|------------------------------------------------------------------------------------|-------------------------------------------------------------------------------|
+| `InvalidApiKey: No API-key provided`             | Key not configured, or tool used `x-api-key` header                                | Set key; switch to `Authorization: Bearer`                                    |
+| `InvalidApiKey: Invalid API-key provided`        | Standard `sk-` key mismatched, subscription expired, key copied with whitespace    | Verify subscription status; reset key in console                              |
+| `Incorrect API key provided` (client-side exit 1) | `sk-sp-` key set for an automation script in this repo                             | Replace with a standard `sk-` key; do **not** redirect traffic anywhere       |
+| `model 'xxx' not found or not supported`         | Model name typo / wrong case; model not in Token Plan catalog                      | Match model ID exactly; review supported list above                           |
+| `Range of input length should be [1, xxx]`       | Input + history exceeds context window                                             | Start a new session, compact context, or switch to a larger-context model     |
+| `API rate limit reached`                         | Seat / shared-package Credits exhausted, or shared quota rate-limited              | Check Token Plan console for usage                                            |
+
+## Cost / Policy Risk Scenarios
+
+1. **`sk-sp-` key set on a script in this repo**: Client-side hard-fail with `exit 1`; no HTTP request sent, no charges, no policy exposure. ✅ Safe.
+2. **`sk-` key when user expects Token Plan coverage**: Calls succeed but incur pay-as-you-go charges. Cannot detect programmatically — user must be informed explicitly.
+3. **Attempting to bypass the hard-fail** (patching the script, overriding `QWEN_BASE_URL` to a Token Plan URL, rewriting the key check, etc.): **Strictly forbidden** — see Forbidden Uses above. Even a single request placed with an `sk-sp-` key from an automation script places the user's subscription at risk.
+4. **Token Plan Credits exhausted**: Hard fail on the Token Plan service side; no fallback to pay-as-you-go.
 
 ## Console & Billing
 
-| Resource                  | URL                                                                |
-|---------------------------|--------------------------------------------------------------------|
-| Token Plan Subscription   | https://platform.qianwenai.com/home/billing/subscription/token-plan                |
-| Token Plan Pricing        | https://platform.qianwenai.com/docs/token-plan/overview#%E5%A5%97%E9%A4%90%E4%B8%8E%E5%AE%9A%E4%BB%B7                  |
-| Pay-as-you-go Billing     | https://platform.qianwenai.com/home/billing/pay-as-you-go      |
-| Usage Analytics (PAYG)    | https://platform.qianwenai.com/home/analytics                  |
+| Resource                  | URL                                                                 |
+|---------------------------|---------------------------------------------------------------------|
+| Token Plan Subscription   | https://platform.qianwenai.com/home/billing/subscription/token-plan |
+| Token Plan Pricing        | https://platform.qianwenai.com/docs/token-plan/overview#%E5%A5%97%E9%A4%90%E4%B8%8E%E5%AE%9A%E4%BB%B7                   |
+| Pay-as-you-go Billing     | https://platform.qianwenai.com/home/billing/pay-as-you-go           |
+| Usage Analytics (PAYG)    | https://platform.qianwenai.com/home/analytics                       |
 
 > [!NOTE]
 > **Usage queries**: Token Plan seat & shared-package Credits balance are currently only viewable in
-> the [Token Plan console](https://platform.qianwenai.com/home/billing/subscription/token-plan) (Subscription page →
-> Token Plan tab). The `qianwen` CLI does not yet support `sk-sp-` Token Plan team-edition keys; CLI
-> commands (`qianwen usage summary`, etc.) only work for standard `sk-` keys.
+> the [Token Plan console](https://platform.qianwenai.com/home/billing/subscription/token-plan)
+> (Subscription page → Token Plan tab). The `qianwen` CLI does not yet support `sk-sp-` Token Plan
+> keys; CLI commands (`qianwen usage summary`, etc.) only work for standard `sk-` keys.
 
 ## Coexistence
 
 Both key types can be held simultaneously by the same user:
-- `sk-sp-` Token Plan key → configured in the AI tool (Cursor, Claude Code, OpenClaw, ...)
-- `sk-` standard key → set in `DASHSCOPE_API_KEY` for QianWen-AI/qianwen-ai execution scripts
+- `sk-sp-` Token Plan key → configured inside the interactive AI tool (Cursor, Claude Code, OpenClaw, ...).
+- `sk-` standard key → set in `DASHSCOPE_API_KEY` for QianWen-AI/qianwen-ai execution scripts.
 
 These are independent; configuring one does not affect the other.

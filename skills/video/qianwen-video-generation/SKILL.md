@@ -1,6 +1,6 @@
 ---
 name: qianwen-video-generation
-description: "[QianWen] Generate videos using Wan models. Supports text-to-video, image-to-video, first+last frame, reference-based role-play, and video editing (VACE). TRIGGER when: user wants to create, generate, or edit video content, mentions video generation/animation/video clips/Wan models, or explicitly invokes this skill by name (e.g. use qianwen-video-generation). DO NOT TRIGGER when: user wants to generate images (use qianwen-image-generation), understand/analyze existing videos (use qianwen-vision), text-only tasks."
+description: "Generate videos using Wan and HappyHorse models. Supports text-to-video, image-to-video, first+last frame, reference-based role-play, and video editing (VACE). TRIGGER when: user wants to create, generate, or edit video content, mentions video generation/animation/video clips/Wan/HappyHorse models, or explicitly invokes this skill by name (e.g. use qianwen-video-generation). DO NOT TRIGGER when: user wants to generate images (use qianwen-image-generation), understand/analyze existing videos (use qianwen-vision), text-only tasks."
 compatibility: "Requires Python 3.9+ and curl. Cursor: auto-loaded. Claude Code: read this skill's SKILL.md before first use."
 ---
 
@@ -9,7 +9,7 @@ compatibility: "Requires Python 3.9+ and curl. Cursor: auto-loaded. Claude Code:
 
 # Qwen Video Generation
 
-Generate videos using Wan models. All tasks are **asynchronous** — submit, then poll until
+Generate videos using Wan and HappyHorse models. All tasks are **asynchronous** — submit, then poll until
 completion.
 This skill is part of **QianWen-AI/qianwen-ai**.
 
@@ -42,25 +42,30 @@ Use this skill's internal files to execute and learn. Load reference files on de
 
 ## Key Compatibility
 
-Scripts require a **standard QianWen API key** (`sk-...`). Token Plan 团队版 keys (`sk-sp-...`) target a different endpoint (`token-plan.cn-beijing.maas.aliyuncs.com`) and do not include video models. Standard `sk-` key required for video. Video generation incurs per-second charges on standard keys. The script detects `sk-sp-` keys at startup and prints a warning. If qianwen-ops-auth is installed, see its `references/tokenplan.md` for full details.
+> [!CAUTION]
+> **Token Plan keys (`sk-sp-...`) are NOT supported by this skill — using them is strictly forbidden.**
+
+Scripts require a **standard QianWen API key** (`sk-...`, pay-as-you-go). The script detects
+`sk-sp-` keys at startup and **hard-fails with `exit 1`** before any HTTP request is sent. See
+`qianwen-ops-auth/references/tokenplan.md` for details.
 
 ## Mode Selection Guide
 
 | User Want | Mode | Key Field |
-|-----------|------|-----------|
+|-----------|------|------------|
 | Generate video from text description only | **t2v** | `prompt` only |
 | Animate a single image | **i2v** | `img_url` or `reference_image` |
 | wan2.7 unified i2v: first frame, first+last frame, video continuation, audio sync | **i2v** | `media[]`, `first_frame_url`, `first_clip_url`, `driving_audio_url` |
 | Transition between two images (**⚠️ 5s fixed, silent only**) | **kf2v** | `first_frame_url` + `last_frame_url` |
 | Role-play: make characters act a new script | **r2v** | `reference_urls` (up to 5) |
-| Video editing: multi-image ref, repainting, local edit, extend, outpaint | **vace** | `function` (default `wan2.1-vace-plus`) |
+| Video editing: multi-image ref, repainting, local edit, extend, outpaint | **vace** | `function` (default `wanx2.1-vace-plus`) |
 | Video editing (no `function` field, uses media array) | **videoedit** | model = `wan2.7-videoedit` or `happyhorse-1.0-video-edit` |
 
 ### Model Selection
 
 1. **User specified a model** → use directly.
 2. **Consult the qianwen-model-selector skill** when model choice depends on capability, scenario, or pricing.
-3. **No signal, clear task** → defaults: t2v → `wan2.6-t2v`, i2v → `wan2.6-i2v-flash`, kf2v → `wan2.2-kf2v-flash`, r2v → `wan2.6-r2v-flash`, vace → `wan2.1-vace-plus`, videoedit → `wan2.7-videoedit`. For wan2.7 features, explicitly set `--model wan2.7-t2v` / `--model wan2.7-i2v` / `--model wan2.7-videoedit`. For HappyHorse series (alternative T2V/I2V/R2V/video-edit), set `--model happyhorse-1.0-{t2v,i2v,r2v,video-edit}`.
+3. **No signal, clear task** → defaults: t2v → `wan2.6-t2v`, i2v → `wan2.6-i2v-flash`, kf2v → `wan2.2-kf2v-flash`, r2v → `wan2.6-r2v-flash`, vace → `wanx2.1-vace-plus`, videoedit → `wan2.7-videoedit`. For wan2.7 features, explicitly set `--model wan2.7-t2v` / `--model wan2.7-i2v` / `--model wan2.7-videoedit`. For HappyHorse 1.1 series (audio output, 3–15s), set `--model happyhorse-1.1-{t2v,i2v,r2v}`. For HappyHorse 1.0 series, set `--model happyhorse-1.0-{t2v,i2v,r2v,video-edit}`.
 
 ## Models
 
@@ -69,6 +74,7 @@ Scripts require a **standard QianWen API key** (`sk-...`). Token Plan 团队版 
 | Model | Features |
 |-------|----------|
 | `wan2.7-t2v` | Ratio control, auto-dubbing, 5000 char prompt, 720P/1080P. Use `resolution` + `ratio` params. |
+| `wan2.7-t2v-2026-06-12` | Snapshot of wan2.7-t2v. Same capabilities. |
 | `wan2.6-t2v` **default** | Audio, multi-shot, 2–15s, 720P/1080P. Use `size` param. |
 | `wan2.5-t2v-preview` | Audio, 5s/10s, 480P/720P/1080P |
 | `wan2.2-t2v-plus` | Silent, 5s, 480P/1080P |
@@ -87,9 +93,10 @@ Scripts require a **standard QianWen API key** (`sk-...`). Token Plan 团队版 
 | Model                                       | Features                                                            |
 |---------------------------------------------|---------------------------------------------------------------------|
 | `wan2.2-kf2v-flash` **(kf2v default)**      | Silent, 5s, 480P/720P/1080P                                         |
+| `wan2.7-r2v-2026-06-12`                     | Snapshot of wan2.7-r2v. Subject reference + voice customization + storyboard. |
 | `wan2.6-r2v`                                | Audio, single/multi character, 2–10s, 720P/1080P                    |
 | `wan2.6-r2v-flash` **(r2v default)**        | Audio/silent, multi-character, 2–10s, 720P/1080P                    |
-| `wan2.1-vace-plus` **(vace)**               | Multi-image ref, repainting, local edit, ≤5s, 720P                  |
+| `wanx2.1-vace-plus` **(vace)**               | Multi-image ref, repainting, local edit, ≤5s, 720P                  |
 
 ### videoedit (Video Editing)
 
@@ -98,19 +105,25 @@ Prompt-driven video editing with optional reference images. No `function` field;
 
 | Model                       | Refs cap | Notes                                                                  |
 |-----------------------------|----------|------------------------------------------------------------------------|
-| `wan2.7-videoedit` (default)| ≤4       | Local/global prompt-driven edit; supports `negative_prompt`. 720P 0.1/s · 1080P 0.15/s |
-| `happyhorse-1.0-video-edit` | ≤5       | Element replacement via reference images; preserves original dynamics. 720P 0.14/s · 1080P 0.24/s |
+| `wan2.7-videoedit` (default)| ≤4       | Local/global prompt-driven edit; supports `negative_prompt`. |
+| `happyhorse-1.0-video-edit` | ≤5       | Element replacement via reference images; preserves original dynamics. |
+
+For pricing details, see [wan2.7-videoedit](https://www.qianwenai.com/models/wan2.7-videoedit) · [happyhorse-1.0-video-edit](https://www.qianwenai.com/models/happyhorse-1.0-video-edit).
 
 ### HappyHorse Series
 
 | Model                       | Mode      | Payload differences vs wan2.6                                         |
 |-----------------------------|-----------|-----------------------------------------------------------------------|
+| `happyhorse-1.1-t2v`        | t2v       | **Audio output**, 3–15s, 720P/1080P. Uses `resolution` + `ratio` (NOT `size`). Same structure as 1.0-t2v. |
+| `happyhorse-1.1-i2v`        | i2v       | **Audio output**, 3–15s, 720P/1080P. Uses `media=[{type:'first_frame',url}]` (exactly one). Same constraints as 1.0-i2v. |
+| `happyhorse-1.1-r2v`        | r2v       | **Audio output**, 3–15s, 720P/1080P. Uses `media=[{type:reference_image,url}]` + `resolution` + `ratio`. Up to 9 refs. |
 | `happyhorse-1.0-t2v`        | t2v       | Uses `resolution` + `ratio` (NOT `size`). |
 | `happyhorse-1.0-i2v`        | i2v       | Uses `media=[{type:'first_frame',url}]` (exactly one). NO `negative_prompt`/`prompt_extend`/`ratio`/`last_frame`/`first_clip`/`driving_audio`. Wan2.6-style `img_url` auto-converted. |
 | `happyhorse-1.0-r2v`        | r2v       | Uses `media=[{type:reference_image,url}]` + `resolution` + `ratio`. Up to 9 refs. |
 | `happyhorse-1.0-video-edit` | videoedit | Uses `input.media = [1 video] + [refs]`. No `function` field. Up to 5 refs. |
 
-Pricing: 720P 0.14/s · 1080P 0.24/s. Endpoint: `/services/aigc/video-generation/video-synthesis`.
+Endpoint: `/services/aigc/video-generation/video-synthesis`.
+
 
 > **⚠️ Important**: The model list above is a **point-in-time snapshot** and may be outdated. Model availability
 > changes frequently. **Always check the [official model list](https://www.qianwenai.com/models)
@@ -171,6 +184,8 @@ python3 <this-skill-dir>/scripts/video.py \
 | `--task-id ID` | Operate on existing task |
 | `--poll-interval N` | Seconds between polls (default: 15) |
 | `--timeout N` | Max wait seconds (default: 600) |
+
+> **Model priority**: `--model` CLI flag > `"model"` field in `--request` JSON > built-in default.
 
 ### Verify Result
 
@@ -243,7 +258,7 @@ rates. Some models may offer a limited free quota — **do not assume any call i
 To check actual usage and bills: use the **qianwen-usage** skill, or visit the console:
 [Usage Analytics](https://platform.qianwenai.com/home/analytics) |
 [Pay-as-you-go Billing](https://platform.qianwenai.com/home/billing/pay-as-you-go) |
-[Token Plan 团队版 Subscription](https://platform.qianwenai.com/home/billing/subscription/token-plan)
+[Token Plan Subscription](https://platform.qianwenai.com/home/billing/subscription/token-plan)
 
 > **NEVER fabricate, guess, or construct usage/billing/console URLs.** Only provide the exact links listed in this skill. If a URL is not listed here, do not invent one.
 
@@ -283,9 +298,9 @@ When passing this skill's output to another skill (e.g., vace edit, vision analy
 | Error | Cause | Action |
 |-------|-------|--------|
 | `401 Unauthorized` | Invalid or missing API key | Run **qianwen-ops-auth** if available; else prompt user to set key (non-plaintext check only) |
-| `400 product not activated` | Model/product not enabled for this account | The model has not been activated. Direct the user to **[enable the model](https://www.qianwenai.com/models)** then retry |
 | `current user api does not support synchronous calls` | Missing async header | Add `X-DashScope-Async: enable` |
 | `429` / `5xx` | Rate limit or server error | Retry with backoff |
+| `The product is not activated` / `Model not subscribed` | Third-party model not enabled on account | Visit [Model Market](https://www.qianwenai.com/models), find the model, click "Enable" / "开通" |
 | Task `FAILED` | Generation failed | Check `output.message` in poll response |
 
 ## Output Location

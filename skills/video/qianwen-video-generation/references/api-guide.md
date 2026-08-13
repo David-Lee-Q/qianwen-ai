@@ -1,12 +1,12 @@
-# Qwen Video Generation (Wan) — API Supplementary Guide
+# Qwen Video Generation (Wan / HappyHorse) — API Supplementary Guide
 
-> **Content validity**: 2026-03 | **Sources**: [Overview](https://platform.qianwenai.com/docs/developer-guides/getting-started/video-models) · [T2V API](https://platform.qianwenai.com/docs/api-reference/video-generation/wan-text-to-video/create-task) · [I2V API](https://platform.qianwenai.com/docs/api-reference/video-generation/wan-image-to-video-first-frame/create-task) · [T2V Guide](https://platform.qianwenai.com/docs/developer-guides/video-generation/text-to-video) · [I2V Guide](https://platform.qianwenai.com/docs/developer-guides/video-generation/image-to-video) · [KF2V Guide](https://platform.qianwenai.com/docs/developer-guides/video-generation/image-to-video-first-last) · [R2V Guide](https://platform.qianwenai.com/docs/developer-guides/video-generation/reference-video) · [VACE Guide](https://platform.qianwenai.com/docs/developer-guides/video-generation/video-editing)
+> **Content validity**: 2026-08 | **Sources**: [Overview](https://platform.qianwenai.com/docs/developer-guides/getting-started/video-models) · [T2V API](https://platform.qianwenai.com/docs/api-reference/video-generation/wan-text-to-video/create-task) · [I2V API](https://platform.qianwenai.com/docs/api-reference/video-generation/wan-image-to-video-first-frame/create-task) · [T2V Guide](https://platform.qianwenai.com/docs/developer-guides/video-generation/text-to-video) · [I2V Guide](https://platform.qianwenai.com/docs/developer-guides/video-generation/image-to-video) · [KF2V Guide](https://platform.qianwenai.com/docs/developer-guides/video-generation/image-to-video-first-last) · [R2V Guide](https://platform.qianwenai.com/docs/developer-guides/video-generation/reference-video) · [VACE Guide](https://platform.qianwenai.com/docs/developer-guides/video-generation/video-editing)
 
 ---
 
 ## Definition
 
-Video generation service based on the Wan model family. Supports **5 creation modes**: text-to-video (t2v), image-to-video (i2v), first+last frame interpolation (kf2v), reference-based video (r2v), and video editing (vace). All tasks use **asynchronous invocation** (submit task → poll result). wan2.6 series supports **automatic dubbing and multi-shot narrative**.
+Video generation service based on the Wan model family and HappyHorse. Supports **5 creation modes**: text-to-video (t2v), image-to-video (i2v), first+last frame interpolation (kf2v), reference-based video (r2v), and video editing (vace). All tasks use **asynchronous invocation** (submit task → poll result). wan2.6 series supports **automatic dubbing and multi-shot narrative**.
 
 ---
 
@@ -18,7 +18,7 @@ Video generation service based on the Wan model family. Supports **5 creation mo
 | Animate a still image | i2v + `wan2.6-i2v-flash` | Fast, audio support, up to 15s. |
 | Transition animation between two images | kf2v + `wan2.2-kf2v-flash` | First+last frame control, 5s, silent. |
 | Maintain character consistency across scenes | r2v + `wan2.6-r2v-flash` | Up to 5 reference characters. `wan2.6-r2v` for higher quality. |
-| Style transfer / local editing / extension | vace + `wan2.1-vace-plus` | Repainting, mask editing, extension, outpainting. |
+| Style transfer / local editing / extension | vace + `wanx2.1-vace-plus` | Repainting, mask editing, extension, outpainting. |
 | Cinematic multi-shot narrative | t2v/i2v + `shot_type: "multi"` | Multiple camera angles and scenes in a single generation. |
 | Custom background music | t2v/i2v + `audio_url` | Provide an audio file for synchronized generation. |
 
@@ -139,3 +139,31 @@ A: The task may still be executing on the server. Use `--task-id {id} --poll-onc
 
 **Q: What does each VACE function do?**
 A: `image_reference` = generate video from reference images. `video_repainting` = full-video style transfer. `video_edit` = mask-based local editing. `video_extension` = extend/continue a video. `video_outpainting` = expand the frame outward.
+
+---
+
+## HappyHorse 1.1 vs 1.0 Differences
+
+HappyHorse 1.1 series (`happyhorse-1.1-t2v`, `happyhorse-1.1-i2v`, `happyhorse-1.1-r2v`) use the same API structure as their 1.0 counterparts with key improvements:
+
+| Aspect | HappyHorse 1.0 | HappyHorse 1.1 |
+|--------|----------------|----------------|
+| Duration | 3–15s | 3–15s (same) |
+| Audio | Silent only | **With audio** (auto-generated) |
+| Resolution | 720P/1080P | 720P/1080P |
+| Payload | Same as 1.1 | Same as 1.0 |
+
+The request structure is **identical** — only the `model` field changes. Existing payloads for `happyhorse-1.0-*` work with `happyhorse-1.1-*` by changing the model ID.
+
+```bash
+# HappyHorse 1.1 T2V (with audio)
+curl -sS 'https://dashscope.aliyuncs.com/api/v1/services/aigc/video-generation/video-synthesis' \
+  -H 'X-DashScope-Async: enable' \
+  -H "Authorization: Bearer $DASHSCOPE_API_KEY" \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "model": "happyhorse-1.1-t2v",
+    "input": {"prompt": "A cardboard city comes alive at night with tiny trains and twinkling lights"},
+    "parameters": {"resolution": "720P", "ratio": "16:9", "duration": 5}
+  }'
+```

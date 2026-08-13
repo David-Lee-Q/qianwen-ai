@@ -1,18 +1,22 @@
 # Model List
 
 > Source: https://www.qianwenai.com/models
-> Updated: 2026-05-02
+> Updated: 2026-08-03
 
 ## Text Generation — Commercial
 
 | Model ID          | Context                             | Thinking         | Key Info                                                                                                                           |
 |-------------------|-------------------------------------|------------------|------------------------------------------------------------------------------------------------------------------------------------|
-| qwen3.6-max-preview | 256K                              | Yes (hybrid)     | **Strongest preview.** Multimodal. Built-in tools (web search, code interpreter). Preview status — verify availability via CLI. Tiered pricing. |
-| qwen3-max         | 256K                                | Yes (hybrid)     | Strongest stable. Built-in tools (web search, code interpreter). Tiered pricing.                                                   |
-| qwen3.6-plus      | 1M                                  | Yes (default on) | **Latest flagship.** Multimodal (text + image + video). Best balance of quality, speed, cost. Surpasses qwen3-vl series. Tiered pricing. |
+| qwen3.8-max        | 1M                                  | Yes (default on) | **Strongest flagship overall.** 2.4T params MoE. Multimodal (text + image). Surpasses 3.7 series significantly. Tiered pricing. |
+| qwen3.7-max        | 1M                                  | Yes (default on) | Qwen3.7 Max. Text-only. Strongest agentic coding, long-horizon execution. Tiered pricing.                                         |
+| qwen3.7-plus       | 1M                                  | Yes (default on) | **Recommended default.** Qwen3.7 Plus. Multimodal vision-language. Enhanced Agent execution & coding, GUI perception. Tiered pricing. |
+| qwen3.7-flash      | 1M                                  | Yes (default on) | Qwen3.7 Flash. Multimodal. Enhanced Agent execution, object recognition, spatial intelligence. Tiered pricing.                      |
+| qwen3.6-plus      | 1M                                  | Yes (default on) | Multimodal (text + image + video). Strong coding & universal recognition. Surpasses qwen3-vl series. Tiered pricing. |
 | qwen3.6-flash     | 1M                                  | Yes (default on) | Fastest Qwen3.6. Multimodal. Tiered pricing.                                                                                       |
 | qwen3.5-plus      | 1M                                  | Yes (default on) | Multimodal (text + image + video input). On par with qwen3-max for text; surpasses qwen3-vl series for vision. Tiered pricing. |
 | qwen3.5-flash     | 1M                                  | Yes (default on) | Fastest Qwen3.5. Tiered pricing.                                                                                                   |
+| qwen3.6-max-preview | 256K                              | Yes (hybrid)     | Preview. Multimodal. Built-in tools (web search, code interpreter). Preview status — verify availability via CLI. Tiered pricing. |
+| qwen3-max         | 256K                                | Yes (hybrid)     | Legacy. Built-in tools (web search, code interpreter). Tiered pricing.                                                   |
 | qwen-plus         | 1M                                  | Yes (hybrid)     | General purpose (Qwen3 series). Tiered pricing.                                                                                    |
 | qwen-flash        | 1M                                  | Yes (hybrid)     | Economy. Tiered pricing. Context cache supported.                                                                                  |
 | qwen-turbo        | 1M (non-thinking) / 128K (thinking) | Yes (hybrid)     | Cheapest per-token.                                                                                                                |
@@ -31,7 +35,10 @@
 | qwen3.6-27b       | 128K    | Yes (default on) | Open source   | Qwen3.6 open-source model. Multimodal capabilities aligned with qwen3.6-plus.             |
 | qwen3.5-27b       | 128K    | Yes (default on) | Open source   | Qwen3.5 open-source model. Strong text+vision baseline.                                   |
 | deepseek-v4-flash | 128K    | Yes (`thinkingFormat: qwen`) | Third party (DeepSeek) | DeepSeek V4 Flash, hosted on QianWen. Verify availability via CLI.            |
+| deepseek-v4-flash-0731 | 1M | Yes (`thinkingFormat: qwen`) | Third party (DeepSeek) | Lightweight MoE (284B/13B active). Native 1M context. Fast, low cost. Balanced general use. |
+| glm-5.2           | 1M      | Yes              | Third party (Zhipu) | GLM-5.2 flagship. Long-horizon tasks. Strong reasoning, code, long-text understanding.       |
 | glm-5.1           | 198K    | Yes              | Third party (Zhipu) | GLM-5.1, Anthropic + OpenAI compatible. Max output 16,384.                          |
+| kimi-k3           | 1M      | Yes              | Third party (Moonshot) | Kimi K3. 2.8T params. Native vision. Long-horizon coding, reasoning, knowledge.     |
 | kimi-k2.6         | 256K    | Yes              | Third party (Moonshot) | Kimi K2.6 long-context model.                                                  |
 | MiniMax-M2.5      | 192K    | Yes              | Third party (MiniMax) | MiniMax M2.5. budgetTokens + output ≤ 32,768.                                   |
 
@@ -79,6 +86,7 @@
 | wan2.2-t2i-flash | Fast text-to-image |
 | wan2.2-t2i-plus | Quality text-to-image |
 | qwen-image-2.0-pro | Fused generation + editing, text rendering, multi-image (1–3 input, 1–6 output) |
+| qwen-image-2.0-pro-2026-06-22 | Latest snapshot: enhanced text rendering (1K token prompt), improved realism & semantic following |
 | qwen-image-2.0 | Accelerated generation + editing |
 | qwen-image-edit-max | Image editing, 1–6 output images |
 | qwen-image-edit-plus | Image editing, 1–6 output images |
@@ -98,16 +106,25 @@
 | wan2.6-i2v / i2v-flash | Image-to-video, audio, multi-shot, 2–15s |
 | wan2.6-r2v / r2v-flash | Reference-based, multi-character, 2–10s |
 | wan2.2-kf2v-flash | First+last frame, 5s, silent |
-| wan2.1-vace-plus | Video editing (repainting, extension, outpainting), ≤5s, silent |
-| happyhorse-1.0-t2v | HappyHorse text-to-video. Uses `resolution` + `ratio` parameters. |
-| happyhorse-1.0-i2v | HappyHorse image-to-video. Uses `resolution` + `ratio` parameters. |
-| happyhorse-1.0-r2v | HappyHorse reference-to-video. Up to 9 reference images via `media[{type:"reference_image", url}]`. |
+| wanx2.1-vace-plus | Video editing (repainting, extension, outpainting), ≤5s, silent |
+| happyhorse-1.1-t2v | **HappyHorse 1.1** text-to-video. 720P/1080P, 3–15s, with audio. Uses `resolution` + `ratio` parameters. |
+| happyhorse-1.1-i2v | **HappyHorse 1.1** image-to-video. 720P/1080P, 3–15s, with audio. Uses `resolution` + `ratio` parameters. |
+| happyhorse-1.1-r2v | **HappyHorse 1.1** reference-to-video. Multi-ref images, 720P/1080P, 3–15s, with audio. |
+| happyhorse-1.0-t2v | HappyHorse 1.0 text-to-video. Uses `resolution` + `ratio` parameters. |
+| happyhorse-1.0-i2v | HappyHorse 1.0 image-to-video. Uses `resolution` + `ratio` parameters. |
+| happyhorse-1.0-r2v | HappyHorse 1.0 reference-to-video. Up to 9 reference images via `media[{type:"reference_image", url}]`. |
 | happyhorse-1.0-video-edit | HappyHorse video editing. Same `media[]` protocol as wan2.7-videoedit. |
 
 ## TTS / ASR
 
 | Model ID | Key Info |
 |----------|----------|
+| qwen-audio-3.0-tts-plus | **Highest quality.** Multi-language + Chinese dialects, instruction control, fine-grained tags. Professional scenarios. |
+| qwen-audio-3.0-tts-flash | **Low-latency realtime.** Multi-language + Chinese dialects, instruction control. Realtime interaction. |
+| cosyvoice-v3.5-plus | Ultra-high expressiveness. Voice clone + synthesis. 11 languages. Free-style instruction. |
+| cosyvoice-v3.5-flash | High-performance TTS. Voice clone + synthesis. 11 languages. Reduced first-packet latency. |
+| cosyvoice-v3-plus | CosyVoice v3 quality. Voice clone + synthesis. |
+| cosyvoice-v3-flash | CosyVoice v3 fast. Voice clone + synthesis. |
 | qwen3-tts-flash | Fast multi-language TTS |
 | qwen3-tts-instruct-flash | Instruction-controlled TTS |
 | qwen3-asr-flash | Real-time ASR |

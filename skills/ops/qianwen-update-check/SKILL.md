@@ -1,6 +1,6 @@
 ---
 name: qianwen-update-check
-description: "[QianWen] Check for qianwen-ai updates and notify the user when a new version is available. TRIGGER when: user asks to check for updates, check version, asks 'is there a new version', 'latest version', 'update skills', 'check update', or any other qwen skill delegates to this skill, or user explicitly invokes this skill by name (e.g. use qianwen-update-check). DO NOT TRIGGER when: non-update-related tasks, general version questions about other software."
+description: "Check for qianwen-ai updates and notify the user when a new version is available. TRIGGER when: user asks to check for updates, check version, asks 'is there a new version', 'latest version', 'update skills', 'check update', or any other qwen skill delegates to this skill, or user explicitly invokes this skill by name (e.g. use qianwen-update-check). DO NOT TRIGGER when: non-update-related tasks, general version questions about other software."
 compatibility: "Requires Python 3.9+ and curl. Cursor: auto-loaded. Claude Code: read this skill's SKILL.md before first use."
 ---
 

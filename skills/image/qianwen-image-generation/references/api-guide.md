@@ -1,6 +1,6 @@
 # Qwen Image Generation — API Supplementary Guide
 
-> **Content validity**: 2026-05 | **Sources**: [Text-to-Image API](https://platform.qianwenai.com/docs/developer-guides/image-generation/text-to-image) · [Image Generation Guide](https://platform.qianwenai.com/docs/developer-guides/image-generation/text-to-image) · [Wan2.6-Image API](https://platform.qianwenai.com/docs/api-reference/image-generation/wan26-image-gen-edit/create-task) · [Z-Image-Turbo](https://www.qianwenai.com/models/z-image-turbo)
+> **Content validity**: 2026-07 | **Sources**: [Text-to-Image API](https://platform.qianwenai.com/docs/developer-guides/image-generation/text-to-image) · [Image Generation Guide](https://platform.qianwenai.com/docs/developer-guides/image-generation/text-to-image) · [Wan2.6-Image API](https://platform.qianwenai.com/docs/api-reference/image-generation/wan26-image-gen-edit/create-task) · [Z-Image-Turbo](https://www.qianwenai.com/models/z-image-turbo)
 
 ---
 
@@ -16,7 +16,7 @@ Generate and edit images using Wan and Qwen-Image models. The Wan series excels 
 |----------|------------------|-------|
 | General creative / realistic photography | `wan2.7-image-pro` / `wan2.7-image` | Multi-function: t2i + editing, thinking mode, 4K (pro). |
 | General creative (dedicated t2i) | `wan2.6-t2i` | Dedicated t2i model, best quality, supports synchronous calls. |
-| Posters / complex text rendering | `qwen-image-2.0-pro` or `wan2.6-t2i` | Strongest Chinese/English text rendering. |
+| Posters / complex text rendering | `qwen-image-2.0-pro` or `wan2.6-t2i` | Strongest Chinese/English text rendering. `qwen-image-2.0-pro-2026-06-22`: supports 1k token instructions, enhanced rendering. |
 | Fast drafts / batch generation | `wan2.2-t2i-flash` | Lowest latency. |
 | Custom resolutions | `qwen-image-2.0` or Wan series | Flexible aspect ratios. |
 | Image editing / style transfer | `wan2.7-image-pro` / `wan2.7-image` / `wan2.6-image` | wan2.7: 0–9 images, bbox editing, thinking mode. wan2.6: 1–4 images. |
@@ -221,8 +221,8 @@ The `wan2.7-image-pro` and `wan2.7-image` models are multi-function models that 
 - **Color palette** customization (3–10 colors)
 
 **wan2.7-image-pro vs wan2.7-image:**
-- `wan2.7-image-pro`: supports 4K resolution for t2i, higher quality. $0.075/image (international)
-- `wan2.7-image`: max 2K resolution, faster. $0.03/image (international)
+- `wan2.7-image-pro`: supports 4K resolution for t2i, higher quality. See [model details](https://www.qianwenai.com/models/wan2.7-image-pro).
+- `wan2.7-image`: max 2K resolution, faster. See [model details](https://www.qianwenai.com/models/wan2.7-image).
 
 ### Endpoint
 
@@ -502,7 +502,7 @@ Then poll with `GET /api/v1/tasks/{task_id}`. Response contains `output.results[
 2. **Cost = unit price × number of images.** The `n` and `max_images` parameters directly affect cost. Always set `n=1` during testing.
 3. **prompt_extend trade-off.** Significantly improves short prompts, but adds 3–4s latency and may drift from original intent. Set `prompt_extend=false` when you need precise control over composition.
 4. **Synchronous vs. asynchronous.** wan2.6-t2i, wan2.6-image (editing mode), and qwen-image-edit series support synchronous calls. Interleaved text-image sync requires streaming; use async mode. wan2.5 and earlier models use async only. `qwen-image-plus` and `qwen-image-max` use async text2image endpoint only.
-5. **Prompt length limit.** Supports both Chinese and English. Maximum 2,000 characters for wan2.6-image, 2,100 characters for wan2.6-t2i; excess is automatically truncated.
+5. **Prompt length limit.** Supports both Chinese and English. Maximum 2,000 characters for wan2.6-image, 2,100 characters for wan2.6-t2i; excess is automatically truncated. `qwen-image-2.0-pro-2026-06-22` supports up to 1k tokens of instruction input.
 6. **Region isolation.** API key, endpoint, and model must belong to the same region. Cross-region calls result in authentication failures.
 7. **Async task_id is valid for 24 hours.** Do not create duplicate tasks; use polling to retrieve the result.
 
@@ -532,7 +532,7 @@ A: Yes. `wan2.7-image-pro` / `wan2.7-image` support 0–9 reference images with 
 A: Set `enable_interleave=true` with `wan2.6-image`. The model generates mixed text and image content. Use async mode (the script auto-enables it). The response contains interleaved text and image items in `output.choices[0].message.content`. The script saves images and a markdown file. Note: `qwen-image-edit` series does **not** support interleaved output.
 
 **Q: How do I optimize costs for batch generation?**
-A: Set `n=1` to generate and evaluate one image at a time. Increase `n` after confirming quality. wan2.2-t2i-flash has the lowest per-image price and is suitable for batch testing.
+A: Set `n=1` to generate and evaluate one image at a time. Increase `n` after confirming quality.
 
 **Q: When to use qwen-image-plus vs qwen-image-2.0-pro for text-to-image?**
 A: `qwen-image-plus` uses the `text2image` endpoint with fixed resolutions — good for batch workflows with standard aspect ratios. `qwen-image-2.0-pro` uses the `multimodal-generation` endpoint with flexible resolutions and can also do image editing. Use `qwen-image-plus` for simple text-to-image; use `qwen-image-2.0-pro` when you need text rendering precision or image editing.

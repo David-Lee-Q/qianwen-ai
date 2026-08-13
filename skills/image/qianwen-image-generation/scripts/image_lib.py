@@ -50,6 +50,7 @@ _QWEN_IMAGE_EDIT_SINGLE_OUTPUT: frozenset[str] = frozenset({"qwen-image-edit"})
 # parameters accept ONLY {size, prompt_extend, seed} -- NO `n`, NO reference images.
 _Z_IMAGE_MODELS: frozenset[str] = frozenset({"z-image-turbo"})
 
+
 # ---------------------------------------------------------------------------
 # Model classification predicates
 # ---------------------------------------------------------------------------
@@ -84,6 +85,8 @@ def is_qwen_t2i_model(model: str) -> bool:
 def is_z_image_model(model: str) -> bool:
     """Return True if model is the z-image series (sync-only, single-text-content)."""
     return model in _Z_IMAGE_MODELS
+
+
 
 # ---------------------------------------------------------------------------
 # Internal helpers
@@ -132,6 +135,8 @@ def _build_z_image_payload(req: dict[str, Any], model: str) -> dict[str, Any]:
         "input": {"messages": [{"role": "user", "content": [{"text": prompt}]}]},
         "parameters": parameters,
     }
+
+
 
 def build_payload(req: dict[str, Any], model: str, api_key: str) -> dict[str, Any]:
     """Build the DashScope request payload for Wan image-edit and general generation."""

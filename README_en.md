@@ -25,7 +25,7 @@
 
 - 🤖 **Agent-native** — Your agent picks the model, tunes the call, and handles errors. You just talk.
 - ⚡ **One-line install** — One command and you're ready. No SDK, no boilerplate.
-- 🧠 **8 skills, one interface** — Text, image, video, voice, vision, model selection, auth， and usage — all built in.
+- 🧠 **10 skills, one interface** — Text, image, video, voice, vision, model selection, auth, usage, payment, and skill discovery — all built in.
 - 🌐 **Works across many agents** — Plug into many [Agent Skills](https://agentskills.io)-compatible agents instantly.
 
 <p align="center">
@@ -130,6 +130,8 @@ Tell your agent what you need — it writes the code, picks the right QianWen mo
 | `qianwen-model-selector` | Recommends the right model for your use case |
 | `qianwen-ops-auth` | API key and authentication management |
 | `qianwen-usage` | Usage queries, free tier checks, subscriptions, billing |
+| `qianwen-payment` | Payment center — account balance, recharge entry (opens official page only), spending limit (read-only) |
+| `qianwen-find-skills` | Discover, compare, and install QianWen Agent Skills for a task |
 
 ---
 

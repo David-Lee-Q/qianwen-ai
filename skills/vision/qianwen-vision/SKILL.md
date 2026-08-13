@@ -1,6 +1,6 @@
 ---
 name: qianwen-vision
-description: "[QianWen] Understand images and videos with Qwen vision models. TRIGGER when: user wants to analyze, describe, or extract information from images or videos, OCR text extraction, chart/table reading, visual reasoning, multi-image comparison, screenshot understanding, video comprehension, or explicitly invokes this skill by name (e.g. use qianwen-vision). DO NOT TRIGGER when: user wants to generate/create images (use qianwen-image-generation), generate videos (use qianwen-video-generation), text-only tasks without visual input, or non-Qwen vision tasks."
+description: "Understand images and videos with Qwen vision models. TRIGGER when: user wants to analyze, describe, or extract information from images or videos, OCR text extraction, chart/table reading, visual reasoning, multi-image comparison, screenshot understanding, video comprehension, or explicitly invokes this skill by name (e.g. use qianwen-vision). DO NOT TRIGGER when: user wants to generate/create images (use qianwen-image-generation), generate videos (use qianwen-video-generation), text-only tasks without visual input, or non-Qwen vision tasks."
 compatibility: "Requires Python 3.9+ and curl. Cursor: auto-loaded. Claude Code: read this skill's SKILL.md before first use."
 ---
 
@@ -38,13 +38,21 @@ Use this skill's internal files to execute and learn. Load reference files on de
 
 ## Key Compatibility
 
-Scripts require a **standard QianWen API key** (`sk-...`). Token Plan 团队版 keys (`sk-sp-...`) target a different endpoint (`token-plan.cn-beijing.maas.aliyuncs.com`) and do not include dedicated vision models (qwen3-vl-plus, qvq-max, qwen-vl-ocr, etc.). Standard `sk-` key required for vision. The scripts detect `sk-sp-` keys at startup and print a warning. If qianwen-ops-auth is installed, see its `references/tokenplan.md` for full details.
+> [!CAUTION]
+> **Token Plan keys (`sk-sp-...`) are NOT supported by this skill — using them is strictly forbidden.**
+
+Scripts require a **standard QianWen API key** (`sk-...`, pay-as-you-go). The scripts detect
+`sk-sp-` keys at startup and **hard-fail with `exit 1`** before any HTTP request is sent. See
+`qianwen-ops-auth/references/tokenplan.md` for details.
 
 ## Model Selection
 
 | Model | Use Case |
 |-------|----------|
-| **qwen3.6-plus** | **Preferred** — latest flagship, unified multimodal (text+image+video). Thinking on by default. Best balance of quality, speed, cost. |
+| **qwen3.8-max** | Strongest flagship — 2.4T params, MoE. Top-tier multimodal (text+image+video). Thinking on by default. 1M context. Higher cost. |
+| **qwen3.7-flash** | High-perf multimodal flash — surpasses qwen3.6-flash across all dimensions. Enhanced universal recognition, Search Agent & CI Agent. Vibe coding optimized. Thinking on by default. 1M context. Best cost-efficiency for vision tasks. |
+| **qwen3.7-plus** | **Preferred** — next-gen balanced model, surpasses qwen3.6-plus in multimodal understanding, Agent execution & coding, GUI perception. 1M context. Thinking on by default. |
+| **qwen3.6-plus** | Previous-gen balanced — multimodal (text+image+video). Thinking on by default. Strong coding & universal recognition. |
 | **qwen3.5-plus** | Unified multimodal (text+image+video). Thinking on by default. |
 | **qwen3.5-flash** | Fast multimodal — cheaper, faster. Thinking on by default. |
 | **qwen3-vl-plus** | High-precision — object localization (2D/3D), document/webpage parsing. |
@@ -56,7 +64,7 @@ Scripts require a **standard QianWen API key** (`sk-...`). Token Plan 团队版 
 
 1. **User specified a model** → use directly.
 2. **Consult the qianwen-model-selector skill** when model choice depends on requirement, scenario, or pricing.
-3. **No signal, clear task** → `qwen3.6-plus`. Use `qwen3-vl-plus` for precise localization or 3D detection.
+3. **No signal, clear task** → `qwen3.7-plus`. Use `qwen3.7-flash` for cost-efficient high-performance vision. Use `qwen3.8-max` for the most complex reasoning. Use `qwen3-vl-plus` for precise localization or 3D detection.
 
 > **⚠️ Important**: The model list above is a **point-in-time snapshot** and may be outdated. Model availability
 > changes frequently. **Always check the [official model list](https://www.qianwenai.com/models)
@@ -98,7 +106,7 @@ If `python3` is not found, try `python --version` or `py -3 --version`. If Pytho
 
 | Script | Purpose | Default Model |
 |--------|---------|---------------|
-| `scripts/analyze.py` | Image understanding, multi-image, video, thinking mode, high-res | `qwen3.6-plus` |
+| `scripts/analyze.py` | Image understanding, multi-image, video, thinking mode, high-res | `qwen3.7-plus` |
 | `scripts/reason.py` | Visual reasoning with chain-of-thought, video reasoning (always streaming) | `qvq-max` |
 | `scripts/ocr.py` | OCR text extraction from documents, receipts, tables | `qwen-vl-ocr` |
 
@@ -141,7 +149,10 @@ python3 <this-skill-dir>/scripts/ocr.py \
 | `--print-response` | Print response to stdout |
 | `--stream` | Enable streaming (auto for thinking/QVQ) |
 | `--upload-files` | Upload local files to temp storage (for files > 7 MB) |
+| `--model ID` | Override model (default per script: see table above) |
 | `--schema path.json` | JSON Schema for structured extraction |
+
+> **Model priority**: `--model` CLI flag > `"model"` field in `--request` JSON > built-in default.
 
 ### Verify Result
 
@@ -194,7 +205,10 @@ When the input file comes from another skill's output (e.g., image-gen, video-ge
 
 | Model | Thinking Default | Notes |
 |-------|-----------------|-------|
-| `qwen3.6-plus` | **On** | Latest flagship. Disable with `enable_thinking: false` for simple tasks. |
+| `qwen3.8-max` | **On** | Strongest flagship. Disable with `enable_thinking: false` for simple tasks. |
+| `qwen3.7-plus` | **On** | **Preferred default.** Disable with `enable_thinking: false` for simple tasks. |
+| `qwen3.7-flash` | **On** | High-perf flash. Disable with `enable_thinking: false` for simple tasks. |
+| `qwen3.6-plus` | **On** | Multimodal. Disable with `enable_thinking: false` for simple tasks. |
 | `qwen3.5-plus` / `qwen3.5-flash` | **On** | Disable with `enable_thinking: false` for simple tasks. |
 | `qwen3-vl-plus` / `qwen3-vl-flash` | Off | Enable with `enable_thinking: true`. |
 | `qvq-max` | Always on | **Streaming output required.** |
@@ -217,14 +231,13 @@ Optimized for text extraction. Supports multi-language, skewed images, tables, f
 |------|---------|--------|
 | 401 | Invalid or missing API key | Run **qianwen-ops-auth** if available; else prompt user to set key (non-plaintext check only) |
 | 400 | Bad request (invalid format) | Verify messages format and image URL/format |
-| 400 `product not activated` | Model/product not enabled for this account | The model has not been activated. Direct the user to **[enable the model](https://www.qianwenai.com/models)** then retry |
 | 429 | Rate limited | Retry with exponential backoff |
 | 5xx | Server error | Retry with exponential backoff |
 
 > **Usage & billing**: Use the **qianwen-usage** skill to check usage, free tier quota, and billing directly. Alternatively, the user can visit the QianWen console:
 > [Usage Analytics](https://platform.qianwenai.com/home/analytics) |
 > [Pay-as-you-go Billing](https://platform.qianwenai.com/home/billing/pay-as-you-go) |
-> [Token Plan 团队版 Subscription](https://platform.qianwenai.com/home/billing/subscription/token-plan)
+> [Token Plan Subscription](https://platform.qianwenai.com/home/billing/subscription/token-plan)
 >
 > **NEVER fabricate, guess, or construct usage/billing/console URLs.** Only provide the exact links listed in this skill. If a URL is not listed here, do not invent one.
 

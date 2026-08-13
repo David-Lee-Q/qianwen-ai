@@ -1,6 +1,6 @@
 ---
 name: qianwen-image-generation
-description: "[QianWen] Generate and edit images using Wan and Qwen Image models. Supports text-to-image, image editing (style transfer, subject consistency, text rendering), and interleaved text-image output. TRIGGER when: user wants to create illustrations, product images, artistic designs, posters, text-to-image generation, edit/transform existing images, apply style transfer, generate images based on reference photos, interleaved text-image content, mentions Wan/Qwen Image models/AI art creation, or explicitly invokes this skill by name (e.g. use qianwen-image-generation). DO NOT TRIGGER when: user wants to understand/analyze existing images or OCR (use qianwen-vision), video generation (use qianwen-video-generation), text-only tasks."
+description: "Generate and edit images using Wan and Qwen Image models. Supports text-to-image, image editing (style transfer, subject consistency, text rendering), and interleaved text-image output. TRIGGER when: user wants to create illustrations, product images, artistic designs, posters, text-to-image generation, edit/transform existing images, apply style transfer, generate images based on reference photos, interleaved text-image content, mentions Wan/Qwen Image models/AI art creation, or explicitly invokes this skill by name (e.g. use qianwen-image-generation). DO NOT TRIGGER when: user wants to understand/analyze existing images or OCR (use qianwen-vision), video generation (use qianwen-video-generation), text-only tasks."
 compatibility: "Requires Python 3.9+ and curl. Cursor: auto-loaded. Claude Code: read this skill's SKILL.md before first use."
 ---
 
@@ -34,7 +34,12 @@ Use this skill's internal files to execute and learn. Load reference files on de
 
 ## Key Compatibility
 
-Scripts require a **standard QianWen API key** (`sk-...`). Token Plan 团队版 keys (`sk-sp-...`) target a different endpoint (`token-plan.cn-beijing.maas.aliyuncs.com`) and cannot be used by these scripts. Token Plan **does** include 4 image generation models (qwen-image-2.0, qwen-image-2.0-pro, wan2.7-image, wan2.7-image-pro), but they are accessed only through interactive AI tools' Skill / Slash Command / Agent mechanism against a dedicated multimodal-generation endpoint — not via this skill's standard DashScope flow. Standard `sk-` key required for this skill. The script detects `sk-sp-` keys at startup and prints a warning. If qianwen-ops-auth is installed, see its `references/tokenplan.md` for full details.
+> [!CAUTION]
+> **Token Plan keys (`sk-sp-...`) are NOT supported by this skill — using them is strictly forbidden.**
+
+Scripts require a **standard QianWen API key** (`sk-...`, pay-as-you-go). The script detects
+`sk-sp-` keys at startup and **hard-fails with `exit 1`** before any HTTP request is sent. See
+`qianwen-ops-auth/references/tokenplan.md` for details.
 
 ## Mode Selection Guide
 
@@ -79,7 +84,7 @@ Scripts require a **standard QianWen API key** (`sk-...`). Token Plan 团队版 
 
 | Model | Use Case |
 |-------|----------|
-| **qwen-image-2.0-pro** | Fused generation + editing — text rendering, realistic textures, multi-image (1–3 input, 1–6 output) |
+| **qwen-image-2.0-pro** | Fused generation + editing — text rendering (significantly enhanced), realistic textures, multi-image (1–3 input, 1–6 output). Supports up to 1k token instruction input. Snapshot: `qwen-image-2.0-pro-2026-06-22` |
 | **qwen-image-2.0** | Accelerated generation + editing |
 | **qwen-image-edit-max** | Image editing — 1–6 output images |
 | **qwen-image-edit-plus** | Image editing — 1–6 output images |
@@ -88,6 +93,12 @@ Scripts require a **standard QianWen API key** (`sk-...`). Token Plan 团队版 
 | **qwen-image-max** | Text-to-image — fixed resolutions only |
 
 Qwen Image editing models (`qwen-image-2.0-pro`, `qwen-image-2.0`, `qwen-image-edit-max/plus/edit`) use the same sync endpoint as `wan2.6-image` (`/multimodal-generation/generation`) with `messages` format. They support text editing in images, element add/delete/replace, style transfer, and multi-image fusion (1–3 input images). Size range: 512x512 to 2048x2048. `qwen-image-2.0-pro` and `qwen-image-2.0` also support pure text-to-image (no reference images needed).
+
+**`qwen-image-2.0-pro-2026-06-22` snapshot improvements** (vs 2026-04-22):
+- Text rendering significantly enhanced — Chinese and English text more accurate and readable
+- Supports up to 1k token instruction input (longer than previous snapshots)
+- Realistic textures and photorealistic scene details rendered more finely
+- Stronger semantic adherence — better follows complex multi-part instructions
 
 Qwen Image text-to-image models (`qwen-image-plus`, `qwen-image-max`) use a different endpoint (`/text2image/image-synthesis`) with `input.prompt` format (async-only). They support only 5 fixed resolutions: 1664\*928, 1472\*1104, 1328\*1328, 1104\*1472, 928\*1664.
 
@@ -163,6 +174,8 @@ python3 <this-skill-dir>/scripts/image.py \
 | `--model ID` | Override model (`wan2.6-t2i` default; see model list in help) |
 | `--output path` | Save image to path (or directory for multi-image output) |
 | `--print-response` | Print response JSON to stdout |
+
+> **Model priority**: `--model` CLI flag > `"model"` field in `--request` JSON > built-in default.
 
 ### Verify Result
 
@@ -294,14 +307,14 @@ When using generated images as input for another skill (e.g., video-gen i2v, vis
 |------|---------|--------|
 | 401 | Invalid or missing API key | Run **qianwen-ops-auth** if available; else prompt user to set key (non-plaintext check only) |
 | 400 | Bad request (invalid prompt, size) | Verify parameters and constraints |
-| 400 `product not activated` | Model/product not enabled for this account | The model has not been activated. Direct the user to **[enable the model](https://www.qianwenai.com/models)** then retry |
+| 400 `The product is not activated` / `Model not subscribed` | Third-party model not enabled on account | Visit [Model Market](https://www.qianwenai.com/models), find the model, click "Enable" / "开通" |
 | 429 | Rate limited | Retry with exponential backoff |
 | 5xx | Server error | Retry with exponential backoff |
 
 > **Usage & billing**: Use the **qianwen-usage** skill to check usage, free tier quota, and billing directly. Alternatively, the user can visit the QianWen console:
 > [Usage Analytics](https://platform.qianwenai.com/home/analytics) |
 > [Pay-as-you-go Billing](https://platform.qianwenai.com/home/billing/pay-as-you-go) |
-> [Token Plan 团队版 Subscription](https://platform.qianwenai.com/home/billing/subscription/token-plan)
+> [Token Plan Subscription](https://platform.qianwenai.com/home/billing/subscription/token-plan)
 >
 > **NEVER fabricate, guess, or construct usage/billing/console URLs.** Only provide the exact links listed in this skill. If a URL is not listed here, do not invent one.
 

@@ -132,7 +132,6 @@ class AIProvider:
             self,
             key: str,
             *,
-            allow_coding_plan: bool = False,
             domain: str = "",
     ) -> str:
         """Validate *key* and return it, or ``sys.exit`` with guidance.
@@ -234,10 +233,9 @@ class DashScopeProvider(AIProvider):
             self,
             key: str,
             *,
-            allow_coding_plan: bool = False,
             domain: str = "",
     ) -> str:
-        if key.startswith("sk-sp-") and not allow_coding_plan:
+        if key.startswith("sk-sp-"):
             suffix = (
                 f" {domain} models are not available on Token Plan."
                 if domain
@@ -249,6 +247,7 @@ class DashScopeProvider(AIProvider):
                 "Docs: https://platform.qianwenai.com/docs/token-plan/overview",
                 file=sys.stderr,
             )
+            sys.exit(1)
         return key
 
     # --- Endpoints ---
@@ -542,17 +541,16 @@ register_provider("dashscope", DashScopeProvider)
 def require_api_key(
         *,
         script_file: str | Path | None = None,
-        allow_coding_plan: bool = False,
         domain: str = "",
 ) -> str:
     """Load and return the API key for the active provider, or exit with guidance.
+
+    Token Plan keys (``sk-sp-...``) are rejected with ``sys.exit(1)``.
 
     Parameters
     ----------
     script_file : str or Path, optional
         ``__file__`` of the calling script -- used to locate ``.env``.
-    allow_coding_plan : bool
-        If ``False`` (default), Token Plan keys emit a warning (DashScope).
     domain : str
         Human-readable domain name for error messages (e.g. "Image", "Video").
     """
@@ -578,9 +576,7 @@ def require_api_key(
         )
         sys.exit(1)
 
-    return provider.validate_api_key(
-        key, allow_coding_plan=allow_coding_plan, domain=domain,
-    )
+    return provider.validate_api_key(key, domain=domain)
 
 
 def compat_base_url() -> str:

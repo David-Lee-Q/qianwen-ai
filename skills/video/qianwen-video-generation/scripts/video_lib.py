@@ -30,26 +30,28 @@ DEFAULT_MODELS: dict[str, str] = {
     MODE_I2V: "wan2.6-i2v-flash",
     MODE_KF2V: "wan2.2-kf2v-flash",
     MODE_R2V: "wan2.6-r2v-flash",
-    MODE_VACE: "wan2.1-vace-plus",
+    MODE_VACE: "wanx2.1-vace-plus",
     MODE_VIDEO_EDIT: "wan2.7-videoedit",
 }
 
 # wan2.7-style models use resolution+ratio (instead of size).
-# NOTE: happyhorse-1.0-t2v keeps sharing the wan2.7-t2v structure (resolution+ratio).
-# happyhorse-1.0-i2v has been split out into its own predicate/builder
-# because its API spec diverges significantly from wan2.7-i2v
+# NOTE: happyhorse-1.0-t2v and happyhorse-1.1-t2v keep sharing the wan2.7-t2v structure (resolution+ratio).
+# happyhorse-1.0-i2v / happyhorse-1.1-i2v have been split out into their own predicate/builder
+# because their API spec diverges significantly from wan2.7-i2v
 # (no negative_prompt / no prompt_extend / no ratio / media must be exactly
 # one {type:'first_frame'}). See _build_happyhorse_i2v_payload below.
-_WAN27_T2V_MODELS = frozenset({"wan2.7-t2v", "happyhorse-1.0-t2v"})
+_WAN27_T2V_MODELS = frozenset({"wan2.7-t2v", "wan2.7-t2v-2026-06-12",
+                               "happyhorse-1.0-t2v", "happyhorse-1.1-t2v"})
 _WAN27_I2V_MODELS = frozenset({"wan2.7-i2v"})
-_HAPPYHORSE_I2V_MODELS = frozenset({"happyhorse-1.0-i2v"})
+_HAPPYHORSE_I2V_MODELS = frozenset({"happyhorse-1.0-i2v", "happyhorse-1.1-i2v"})
 
 # happyhorse-r2v uses media[{type:reference_image, url}] + resolution+ratio
 # (different from wan2.6-r2v which uses reference_urls + size).
-_HAPPYHORSE_R2V_MODELS = frozenset({"happyhorse-1.0-r2v"})
+_HAPPYHORSE_R2V_MODELS = frozenset({"happyhorse-1.0-r2v", "happyhorse-1.1-r2v"})
 
 # Video-edit models share a unified payload (media=[1 video]+[refs], no `function`).
 _VIDEO_EDIT_MODELS = frozenset({"happyhorse-1.0-video-edit", "wan2.7-videoedit"})
+
 
 ENDPOINTS: dict[str, str] = {
     MODE_T2V: "/services/aigc/video-generation/video-synthesis",
@@ -94,15 +96,16 @@ def detect_mode(request: dict[str, Any]) -> str:
 # ---------------------------------------------------------------------------
 
 RESOLVE_KEYS: dict[str, list[str]] = {
-    MODE_T2V: ["audio_url"],
+    MODE_T2V: ["audio_url", "video_url"],
     MODE_I2V: ["img_url", "reference_image", "audio_url",
-               "first_frame_url", "last_frame_url", "driving_audio_url", "first_clip_url"],
+               "first_frame_url", "last_frame_url", "driving_audio_url", "first_clip_url",
+               "media"],
     MODE_KF2V: ["first_frame_url", "last_frame_url"],
-    MODE_R2V: ["reference_urls"],
+    MODE_R2V: ["reference_urls", "media"],
     MODE_VACE: ["video_url", "mask_image_url", "mask_video_url",
                 "ref_images_url", "first_clip_url", "last_clip_url",
-                "first_frame_url", "last_frame_url"],
-    MODE_VIDEO_EDIT: ["video_url", "reference_images"],
+                "first_frame_url", "last_frame_url", "media"],
+    MODE_VIDEO_EDIT: ["video_url", "reference_images", "media"],
 }
 
 
@@ -116,14 +119,23 @@ def resolve_request_urls(request: dict[str, Any], api_key: str, model: str,
         if isinstance(val, str):
             request[key] = resolve_file(val, api_key=api_key, model=model)
         elif isinstance(val, list):
-            request[key] = [resolve_file(str(v), api_key=api_key, model=model) for v in val]
+            if val and isinstance(val[0], dict):
+                # Handle list[dict] structure (e.g. media: [{type: "...", url: "..."}])
+                for item in val:
+                    if isinstance(item, dict) and "url" in item:
+                        url_val = item["url"]
+                        if isinstance(url_val, str):
+                            item["url"] = resolve_file(url_val, api_key=api_key, model=model)
+            else:
+                # Original logic: handle list[str]
+                request[key] = [resolve_file(str(v), api_key=api_key, model=model) for v in val]
 
 # ---------------------------------------------------------------------------
 # Payload builders
 # ---------------------------------------------------------------------------
 
 def build_t2v_payload(request: dict[str, Any], model: str) -> dict[str, Any]:
-    """Build payload for text-to-video generation (wan2.6/wan2.7/happyhorse-1.0-t2v)."""
+    """Build payload for text-to-video generation (wan2.6/wan2.7/happyhorse-t2v)."""
     is_v27 = model in _WAN27_T2V_MODELS
 
     input_obj: dict[str, Any] = {"prompt": request.get("prompt", "")}
@@ -159,7 +171,7 @@ def build_i2v_payload(request: dict[str, Any], model: str) -> dict[str, Any]:
 
     Routing (front-loaded predicates -- different model families MUST NOT
     share a builder, even when payloads look superficially similar):
-      1. happyhorse-1.0-i2v -> _build_happyhorse_i2v_payload (strict spec)
+      1. happyhorse-1.0-i2v / happyhorse-1.1-i2v -> _build_happyhorse_i2v_payload (strict spec)
       2. wan2.7-i2v / explicit media[] / first_clip_url -> _build_i2v_v27_payload
       3. wan2.6-i2v fallback (single img_url)
     """

@@ -162,7 +162,7 @@ examples:
     parser.add_argument("--output", default="output/qianwen-text",
                         help="Directory to save response JSON (default: output/qianwen-text)")
     parser.add_argument("--print-response", action="store_true", help="Print generated text to stdout")
-    parser.add_argument("--model", default=None, help="Model ID (default: qwen3.6-plus)")
+    parser.add_argument("--model", default=None, help="Model ID (default: qwen3.7-plus)")
     parser.add_argument("--stream", action="store_true", help="Enable streaming response (SSE)")
     parser.add_argument("--enable-thinking", action="store_true", dest="enable_thinking_flag",
                         help="Enable chain-of-thought thinking mode (overrides model defaults). "
@@ -180,7 +180,7 @@ examples:
     if args.model:
         request["model"] = args.model
     elif "model" not in request:
-        request["model"] = "qwen3.6-plus"
+        request["model"] = "qwen3.7-plus"
     
     # Thinking mode handling:
     # - User explicitly enabled via flag → set true

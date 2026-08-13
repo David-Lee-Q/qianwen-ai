@@ -55,12 +55,34 @@ from video_lib import (  # noqa: E402
     format_task_status,
 )
 
+_NOT_ACTIVATED_KEYWORDS = ("not activated", "not subscribed", "not enabled",
+                           "product is not activated", "model not subscribed")
+_MODEL_MARKET_URL = "https://www.qianwenai.com/models"
+
+
+def _check_not_activated(error_msg: str, model: str) -> bool:
+    """Check if error indicates model not activated; print guidance if so."""
+    msg_lower = error_msg.lower()
+    if any(kw in msg_lower for kw in _NOT_ACTIVATED_KEYWORDS):
+        print(f'\nERROR: Model "{model}" is not activated on your account.',
+              file=sys.stderr)
+        print(f'To activate this model, visit: {_MODEL_MARKET_URL}',
+              file=sys.stderr)
+        print('Then find the model and click "Enable" / "\u5f00\u901a" to activate it.',
+              file=sys.stderr)
+        print(f'Original error: {error_msg}', file=sys.stderr)
+        return True
+    return False
+
 # ---------------------------------------------------------------------------
-def _handle_result(result: dict[str, Any], args: argparse.Namespace) -> None:
+def _handle_result(result: dict[str, Any], args: argparse.Namespace,
+                   model: str = "") -> None:
     output = result.get("output", {})
     status = output.get("task_status", "")
     if status != "SUCCEEDED":
         msg = output.get("message", "Unknown error")
+        code = output.get("code", "")
+        _check_not_activated(f"{code}: {msg}" if code else msg, model)
         print(f"Error: Task failed ({status}): {msg}", file=sys.stderr)
         sys.exit(1)
 
@@ -105,7 +127,7 @@ mode auto-detection (from request JSON fields):
   i2v   img_url/media/first_frame_url → image-to-video (default: wan2.6-i2v-flash, or wan2.7-i2v)
   kf2v  first_frame_url (without media) → keyframe-to-video (default: wan2.2-kf2v-flash)
   r2v   reference_urls → reference role-play (default: wan2.6-r2v-flash)
-  vace  function → video editing/repaint/extend (default: wan2.1-vace-plus)
+  vace  function → video editing/repaint/extend (default: wanx2.1-vace-plus)
 
 model version differences (handled automatically):
   wan2.6-t2v / wan2.7-t2v / happyhorse-1.0-t2v:
@@ -223,7 +245,7 @@ examples:
             print(f"  {format_task_status(result)}", file=sys.stderr)
         status = result.get("output", {}).get("task_status", "")
         if status in ("SUCCEEDED", "FAILED", "CANCELED"):
-            _handle_result(result, args)
+            _handle_result(result, args, model=args.model or "")
         else:
             print(json.dumps(result, ensure_ascii=False, indent=2))
             sys.exit(2)
@@ -244,7 +266,7 @@ examples:
             print(f"Error: {e}", file=sys.stderr)
             print(f"Task may still be running. Resume with: --task-id {task_id}", file=sys.stderr)
             sys.exit(1)
-        _handle_result(result, args)
+        _handle_result(result, args, model=args.model or "")
         return
 
     # --- Normal mode: submit new task ---
@@ -256,7 +278,7 @@ examples:
 
     mode = args.mode or detect_mode(request)
     model = args.model or request.get("model") or DEFAULT_MODELS[mode]
-    # Model-aware correction: wan2.7-i2v / happyhorse-1.0-i2v use first_frame_url
+    # Model-aware correction: wan2.7-i2v / happyhorse-i2v use first_frame_url
     # but belong to i2v mode (detect_mode would have classified them as kf2v).
     if model in _WAN27_I2V_MODELS or model in _HAPPYHORSE_I2V_MODELS:
         if mode == MODE_KF2V:
@@ -285,6 +307,7 @@ examples:
         resp = http_request("POST", url, api_key, payload,
                             extra_headers={"X-DashScope-Async": "enable"}, timeout=60)
     except Exception as e:
+        _check_not_activated(str(e), model)
         print(f"API error: {e}", file=sys.stderr)
         sys.exit(1)
 
@@ -314,7 +337,7 @@ examples:
         print(f"Task may still be running. Resume with: --task-id {task_id}", file=sys.stderr)
         sys.exit(1)
 
-    _handle_result(result, args)
+    _handle_result(result, args, model=model)
 
 if __name__ == "__main__":
     main()
