@@ -82,8 +82,23 @@ function quotaBadge(ft) {
   )
 }
 
+function unitLabel(u) {
+  if (u === 'characters') return '字符'
+  if (u === 'images') return '张'
+  if (u === 'seconds') return '秒'
+  return u || ''
+}
+
+function fmtNum(n) {
+  if (n == null) return '—'
+  if (n >= 100000000) return `${(n / 100000000).toFixed(1).replace(/\.0$/, '')} 亿`
+  if (n >= 10000) return `${(n / 10000).toFixed(1).replace(/\.0$/, '')} 万`
+  return n.toLocaleString()
+}
+
 function ModelCard({ m, isDefault }) {
   const ft = formatFreeTier(m)
+  const unit = ft ? unitLabel(ft.unit) : ''
   return (
     <Card
       className={`p-4 transition-shadow duration-200 ${
@@ -107,15 +122,24 @@ function ModelCard({ m, isDefault }) {
       {ft && ft.status === 'valid' && (
         <div className="mt-3 space-y-1.5 border-t border-slate-100 pt-3 text-xs">
           <div className="flex justify-between">
-            <span className="text-slate-500">剩余额度</span>
+            <span className="text-slate-500">免费额度</span>
             <span className="font-semibold text-slate-700">
-              {ft.remaining != null ? ft.remaining.toLocaleString() : '—'}
-              {ft.total != null ? ` / ${ft.total.toLocaleString()}` : ''}
+              {fmtNum(ft.total)}
+              {unit ? ` ${unit}` : ''}
             </span>
           </div>
           <div className="flex justify-between">
-            <span className="text-slate-500">已用</span>
-            <span className="font-semibold text-slate-700">{ft.usedPct}%</span>
+            <span className="text-slate-500">已消耗</span>
+            <span className="font-semibold text-slate-700">
+              {ft.consumed != null ? `${fmtNum(ft.consumed)}${unit ? ' ' + unit : ''}` : '—'}（{ft.usedPct}%）
+            </span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-slate-500">剩余额度</span>
+            <span className="font-semibold text-slate-700">
+              {ft.remaining != null ? `${fmtNum(ft.remaining)}${unit ? ' ' + unit : ''}` : '—'}
+              <span className="font-normal text-slate-400">（剩余 {100 - ft.usedPct}%）</span>
+            </span>
           </div>
           <div className="flex justify-between">
             <span className="text-slate-500">到期时间</span>

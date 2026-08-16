@@ -35,13 +35,20 @@ export function daysUntil(resetDate) {
 }
 
 export function isFreeValid(m) {
-  return m && m.canTry && m.status === 'valid' && m.resetDate && m.resetDate > new Date().toISOString()
+  return m && m.status === 'valid' && m.resetDate && m.resetDate > new Date().toISOString()
+}
+
+// 默认模型排除规则：语音类默认仅从纯语音合成(TTS)选，排除识别/翻译/音乐/对话；视觉类排除实时翻译/语音对话
+const DEFAULT_EXCLUDE = {
+  audio: /(paraformer|sensevoice|fun-asr|asr|livetranslate|realtime|fun-music|music)/i,
+  vision: /(livetranslate|realtime)/i,
 }
 
 // 同类模型中快过期的优先（resetDate 升序第一个）
 export function pickRecommended(benefits, category) {
+  const ex = DEFAULT_EXCLUDE[category]
   const list = catModels(benefits, category)
-    .filter((m) => isFreeValid(m))
+    .filter((m) => isFreeValid(m) && (!ex || !ex.test(m.id)))
     .sort((a, b) => new Date(a.resetDate) - new Date(b.resetDate))
   return list[0] || null
 }
@@ -82,7 +89,9 @@ export function formatFreeTier(m) {
     return {
       label: '免费额度',
       status: 'valid',
+      unit: m.unit,
       remaining: m.remaining,
+      consumed: m.consumed,
       total: m.total,
       usedPct: pct,
       daysLeft: d,
@@ -90,7 +99,14 @@ export function formatFreeTier(m) {
     }
   }
   if (m.status === 'expire') {
-    return { label: '免费额度', status: 'expired', usedPct: 100, resetDate: m.resetDate }
+    return {
+      label: '免费额度',
+      status: 'expired',
+      unit: m.unit,
+      consumed: m.consumed,
+      usedPct: m.usedPct != null ? m.usedPct : 100,
+      resetDate: m.resetDate,
+    }
   }
   return null
 }

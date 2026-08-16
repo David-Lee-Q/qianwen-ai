@@ -287,10 +287,16 @@ function capabilitiesOf(modality = {}) {
   if (out.includes('video')) caps.push('video')
   if (out.includes('image')) caps.push('image')
   if (out.includes('audio')) caps.push('audio')
-  if (out.includes('text')) caps.push('text')
+  // 语音识别 / 语音对话（输入或输出含音频）归入语音类
+  if (out.includes('text') && (inp.includes('audio') || out.includes('audio'))) {
+    caps.push('audio')
+  }
+  // 视觉理解：图像/视频输入 + 文本输出
   if (out.includes('text') && (inp.includes('image') || inp.includes('video'))) {
     caps.push('vision')
   }
+  // 纯文本对话（输入不含音频）
+  if (out.includes('text') && !inp.includes('audio')) caps.push('text')
   return caps.length ? caps : ['text']
 }
 
@@ -303,15 +309,33 @@ const CATEGORY_LABEL = {
 }
 
 function isFreeValid(m) {
-  return m.canTry && m.status === 'valid' && m.resetDate && m.resetDate > new Date().toISOString()
+  return m.status === 'valid' && m.resetDate && m.resetDate > new Date().toISOString()
+}
+
+// models list 未收录的模型按名称/单位推断能力分类
+function inferCaps(id, unit) {
+  const s = id.toLowerCase()
+  if (unit === 'images') return ['image']
+  if (/(wan|happyhorse|pixverse|vidu|kling|emoji|video)/.test(s)) return ['video']
+  if (/(sambert|cosyvoice|fun-cosyvoice|tts|asr|paraformer|sensevoice|fun-asr|fun-music|voice)/.test(s))
+    return ['audio']
+  if (/(image|wanx|aitryon|wordart)/.test(s)) return ['image']
+  return ['text']
+}
+
+// 默认模型排除规则：语音类默认仅从纯语音合成(TTS)选，排除识别/翻译/音乐/对话；视觉类排除实时翻译/语音对话
+const DEFAULT_EXCLUDE = {
+  audio: /(paraformer|sensevoice|fun-asr|asr|livetranslate|realtime|fun-music|music)/i,
+  vision: /(livetranslate|realtime)/i,
 }
 
 // 每类默认模型：免费额度 valid 中按到期时间升序（快过期优先）
 function computeDefaults(list) {
   const defaults = {}
   for (const key of Object.keys(CATEGORY_LABEL)) {
+    const ex = DEFAULT_EXCLUDE[key]
     const valid = list
-      .filter((m) => m.caps.includes(key) && isFreeValid(m))
+      .filter((m) => m.caps.includes(key) && isFreeValid(m) && (!ex || !ex.test(m.id)))
       .sort((a, b) => new Date(a.resetDate) - new Date(b.resetDate))
     defaults[key] = valid[0]?.id || null
   }
@@ -319,32 +343,56 @@ function computeDefaults(list) {
 }
 
 function refreshModelBenefits() {
-  const run = runCli(['models', 'list', '--all', '--verbose', '--format', 'json'])
-  if (!run.ok) return { ok: false, reason: run.reason }
+  // 数据源与官方平台 benefits 页面一致：usage free-tier（免费额度+已消耗+剩余比例+到期时间）
+  const ftRun = runCli(['usage', 'free-tier', '--format', 'json'])
+  if (!ftRun.ok) return { ok: false, reason: ftRun.reason }
   try {
-    const parsed = JSON.parse(run.stdout)
-    const list = (parsed.models || []).map((m) => {
-      const q = m.free_tier?.quota || {}
+    const ftParsed = JSON.parse(ftRun.stdout)
+    const ftList = ftParsed.free_tier || []
+    // 用 models list 补齐各模型的能力分类（modality/context/pricing）
+    let modMap = {}
+    const modRun = runCli(['models', 'list', '--all', '--verbose', '--format', 'json'])
+    if (modRun.ok) {
+      try {
+        const modParsed = JSON.parse(modRun.stdout)
+        modMap = Object.fromEntries(
+          (modParsed.models || []).map((m) => [
+            m.id,
+            {
+              caps: capabilitiesOf(m.modality),
+              context: m.context?.context_window
+                ? `${Math.round(m.context.context_window / 1000)}K`
+                : '',
+              pricing: m.pricing?.summary?.unit || '',
+            },
+          ]),
+        )
+      } catch {
+        // 分类补齐失败不阻塞
+      }
+    }
+    const list = ftList.map((f) => {
+      const q = f.quota || {}
+      const info = modMap[f.model_id] || {}
       return {
-        id: m.id,
-        caps: capabilitiesOf(m.modality),
-        canTry: !!m.can_try,
+        id: f.model_id,
+        caps: info.caps || inferCaps(f.model_id, q.unit),
+        canTry: true,
+        unit: q.unit || '',
         status: q.status || '',
         remaining: q.remaining ?? null,
         total: q.total ?? null,
         usedPct: q.used_pct ?? null,
+        consumed:
+          q.total != null && q.remaining != null ? Math.max(0, q.total - q.remaining) : null,
         resetDate: q.resetDate || null,
-        context: m.context?.context_window
-          ? `${Math.round(m.context.context_window / 1000)}K`
-          : '',
-        pricing: m.pricing?.summary?.unit || '',
+        context: info.context || '',
+        pricing: info.pricing || '',
       }
     })
-    // 可用模型 = 可试用且免费额度未过期；排除不匹配五类展示的专业工具模型（语音识别/向量/声音复刻采集等）
-    const SKIP = /embedding|rerank|paraformer|fun-asr|voice-enrollment|speech-biasing|qwen-vl-embedding/i
-    const usable = list.filter(
-      (m) => m.canTry && m.status !== 'expire' && !SKIP.test(m.id),
-    )
+    // 与官方 benefits 页面保持一致：展示有免费额度的模型（valid）；排除不匹配五类的向量模型
+    const SKIP = /embedding|rerank/i
+    const usable = list.filter((m) => m.status === 'valid' && !SKIP.test(m.id))
     const categories = {}
     for (const key of Object.keys(CATEGORY_LABEL)) {
       categories[key] = {
@@ -354,7 +402,7 @@ function refreshModelBenefits() {
     }
     modelBenefits = {
       updatedAt: new Date().toISOString(),
-      source: 'qianwen_cli',
+      source: 'qianwen_cli_usage_free_tier',
       models: usable,
       categories,
       defaults: computeDefaults(usable),
