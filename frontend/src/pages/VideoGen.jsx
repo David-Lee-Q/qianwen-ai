@@ -35,8 +35,14 @@ export default function VideoGen() {
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState(null)
   const [playing, setPlaying] = useState(false)
+  const [error, setError] = useState('')
   const modelTouched = useRef(false)
+  const pollRef = useRef(null)
   const { benefits } = useModelBenefits()
+
+  useEffect(() => {
+    return () => clearInterval(pollRef.current)
+  }, [])
 
   useEffect(() => {
     if (!benefits) return
@@ -77,20 +83,55 @@ export default function VideoGen() {
     if (!p || loading) return
     setLoading(true)
     setResult(null)
+    setError('')
     try {
-      const res = await mockApi.generateVideo(p, { model, duration })
-      setResult(res)
-      mockApi
-        .recordHistory({
-          type: 'video',
-          model: res.model,
-          prompt: p,
-          output: res.url,
-          meta: { duration: res.duration, poster: res.poster },
-        })
-        .catch(() => {})
-    } finally {
+      const task = await mockApi.generateVideo(p, { model, duration })
+      if (!task.taskId) throw new Error(task.error || '视频任务提交失败')
+      startPolling(task.taskId, task.model || model, task.duration || duration)
+    } catch (e) {
+      setError(e?.message || '视频任务提交失败，请重试')
       setLoading(false)
+    }
+  }
+
+  function startPolling(taskId, mdl, dur) {
+    clearInterval(pollRef.current)
+    let tries = 0
+    pollRef.current = setInterval(async () => {
+      tries += 1
+      try {
+        const t = await mockApi.getVideoTask(taskId)
+        if (t.status === 'SUCCEEDED') {
+          clearInterval(pollRef.current)
+          setResult({
+            url: t.video_url || '',
+            poster: t.poster || '',
+            model: t.model || mdl,
+            duration: t.duration || dur,
+            taskId,
+          })
+          setLoading(false)
+        } else if (t.status === 'FAILED') {
+          clearInterval(pollRef.current)
+          setError(t.error || '视频生成失败，请重试')
+          setLoading(false)
+        } else if (tries >= 90) {
+          clearInterval(pollRef.current)
+          setError('视频生成超时，请稍后重试')
+          setLoading(false)
+        }
+      } catch {
+        // 单次轮询失败忽略，继续重试
+      }
+    }, 4000)
+  }
+
+  async function handleDownload() {
+    if (!result?.taskId) return
+    try {
+      await mockApi.downloadVideo(result.taskId)
+    } catch {
+      setError('视频下载失败，请重试')
     }
   }
 
@@ -134,8 +175,7 @@ export default function VideoGen() {
           <Button onClick={generate} disabled={loading || !prompt.trim()} className="w-full">
             {loading ? (
               <>
-                <Spinner /> 正在生成视频…
-              </>
+                <Spinner /> 正在生成视频…              </>
             ) : (
               <>
                 <Clapperboard className="h-4 w-4" aria-hidden="true" />
@@ -173,7 +213,18 @@ export default function VideoGen() {
           {result && <Badge color="bg-emerald-50 text-emerald-600">生成完成</Badge>}
         </div>
 
-        {!result && !loading ? (
+        {error && !result && !loading ? (
+          <div className="flex flex-1 flex-col items-center justify-center gap-2 p-6 text-center">
+            <p className="text-sm font-medium text-rose-600">{error}</p>
+            <button
+              type="button"
+              className="cursor-pointer text-xs text-slate-400 hover:text-primary"
+              onClick={() => setError('')}
+            >
+              关闭提示
+            </button>
+          </div>
+        ) : !result && !loading ? (
           <EmptyState
             icon={<Clapperboard className="h-6 w-6" aria-hidden="true" />}
             title="还没有生成视频"
@@ -185,7 +236,7 @@ export default function VideoGen() {
               <Clapperboard className="h-10 w-10 text-slate-300" aria-hidden="true" />
             </div>
             <p className="text-sm text-slate-400">
-              视频合成需要一点时间，请稍候…
+              视频任务已提交，正在异步合成（约需 1-3 分钟），请稍候…
             </p>
           </div>
         ) : (
@@ -205,12 +256,9 @@ export default function VideoGen() {
                 <Play className="h-4 w-4" aria-hidden="true" />
                 {playing ? '暂停' : '播放'}
               </Button>
-              <Button
-                variant="secondary"
-                onClick={() => window.open(result.url, '_blank')}
-              >
+              <Button variant="secondary" onClick={handleDownload}>
                 <Download className="h-4 w-4" aria-hidden="true" />
-                下载
+                下载视频
               </Button>
               <Badge color="bg-slate-100 text-slate-500">
                 提示词：{prompt.slice(0, 40)}

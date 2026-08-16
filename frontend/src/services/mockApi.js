@@ -194,12 +194,33 @@ async function realVideo(prompt, { model = 'wan2.6-t2v', duration = 5 } = {}) {
   })
   if (!res.ok) throw await toError(res)
   const data = await res.json()
+  if (!data.task_id) throw new Error(data.error || '视频任务提交失败')
   return {
+    taskId: data.task_id,
     model: data.model || model,
     duration: data.duration || duration,
-    url: data.video_url || '',
-    poster: '',
+    status: data.status || 'PENDING',
   }
+}
+
+async function getVideoTask(taskId) {
+  const res = await fetch(`/api/v1/video/task/${taskId}`, { headers: authHeaders() })
+  if (!res.ok) throw await toError(res)
+  return await res.json()
+}
+
+async function downloadVideo(taskId) {
+  const res = await fetch(`/api/v1/video/download/${taskId}`, { headers: authHeaders() })
+  if (!res.ok) throw await toError(res)
+  const blob = await res.blob()
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `qwen-video-${String(taskId).slice(0, 8)}.mp4`
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  URL.revokeObjectURL(url)
 }
 
 async function realAudio(text, { voice = 'Cherry', speed = 1.0 } = {}) {
@@ -345,14 +366,30 @@ export const mockApi = {
 
   async generateVideo(prompt, { model = 'wan2.6-t2v', duration = 5 } = {}) {
     if (isRealMode()) return realVideo(prompt, { model, duration })
-    await delay(1800 + Math.random() * 900)
+    await delay(1200)
     return {
+      taskId: `mock-${Date.now().toString(36)}`,
       model,
       duration,
-      url: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
-      poster:
-        'https://images.unsplash.com/photo-1533738363-b7f9aef128ce?w=800&q=80',
+      status: 'PENDING',
     }
+  },
+
+  async getVideoTask(taskId) {
+    if (isRealMode()) return getVideoTask(taskId)
+    await delay(1500)
+    return {
+      status: 'SUCCEEDED',
+      model: '',
+      duration: 5,
+      video_url:
+        'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
+      poster: 'https://images.unsplash.com/photo-1533738363-b7f9aef128ce?w=800&q=80',
+    }
+  },
+
+  async downloadVideo(taskId) {
+    if (isRealMode()) return downloadVideo(taskId)
   },
 
   async synthesizeSpeech(text, { voice = 'Cherry', speed = 1.0 } = {}) {

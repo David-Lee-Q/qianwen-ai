@@ -482,6 +482,10 @@ function scheduleBenefitsCheck() {
 const HISTORY_FILE = path.resolve(__dirname, 'data/history.json')
 const HISTORY_MAX = 500
 
+// 异步视频任务：提交后立即返回 task_id，前端轮询状态；成功时同步写入历史记录（去重）
+const videoTasks = new Map()
+const videoRecorded = new Set()
+
 function loadHistory() {
   try {
     if (fs.existsSync(HISTORY_FILE)) {
@@ -783,24 +787,132 @@ const server = http.createServer(async (req, res) => {
     const body = await readBody(req)
     if (!body) return sendJson(res, 400, { error: '请求体不是合法 JSON' })
     const model = body.model || 'wan2.6-t2v'
+    const prompt = body.prompt || ''
+    const duration = body.duration || 5
+    if (!prompt.trim()) return sendJson(res, 400, { error: '提示词不能为空' })
+    const apiKey = resolveApiKey(req)
+    if (!apiKey) {
+      sendJson(res, 401, {
+        error: 'API Key 未配置',
+        hint: '内置模式需在服务端 .env 配置 Key，或切换自定义模型在设置页填入 Key',
+      })
+      return
+    }
     const payload = {
       model,
-      input: { prompt: body.prompt },
-      parameters: { duration: body.duration || 5 },
+      input: { prompt },
+      parameters: { duration },
     }
     if (body.size) payload.parameters.size = body.size
-    return proxyAsyncTask(
-      res,
-      '/api/v1/services/aigc/video-generation/video-synthesis',
-      payload,
-      (pollData, taskId) => ({
-        model,
-        duration: body.duration || 5,
+    try {
+      const submit = await fetch(`${BASE}/api/v1/services/aigc/video-generation/video-synthesis`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+          'X-DashScope-Async': 'enable',
+        },
+        body: JSON.stringify(payload),
+      })
+      const submitData = await submit.json()
+      const taskId = submitData.output?.task_id
+      if (!taskId) {
+        return sendJson(res, submit.status >= 400 ? submit.status : 502, {
+          error: submitData.code || submitData.message || '视频任务提交失败',
+          output: submitData.output,
+        })
+      }
+      videoTasks.set(taskId, { model, duration, prompt })
+      return sendJson(res, 200, {
         task_id: taskId,
-        video_url: pollData.output?.video_url || '',
-      }),
-      resolveApiKey(req),
-    )
+        model,
+        duration,
+        status: 'PENDING',
+      })
+    } catch (err) {
+      return sendJson(res, 502, {
+        error: '视频任务提交失败',
+        detail: String(err.message || err),
+      })
+    }
+  }
+
+  if (req.method === 'GET' && url.pathname.startsWith('/api/v1/video/task/')) {
+    const taskId = decodeURIComponent(url.pathname.slice('/api/v1/video/task/'.length))
+    const apiKey = resolveApiKey(req)
+    if (!apiKey) {
+      return sendJson(res, 401, { error: 'API Key 未配置' })
+    }
+    const meta = videoTasks.get(taskId) || { model: '', duration: 5, prompt: '' }
+    try {
+      const poll = await fetch(`${BASE}/api/v1/tasks/${taskId}`, {
+        headers: { Authorization: `Bearer ${apiKey}` },
+      })
+      const pollData = await poll.json()
+      const status = pollData.output?.task_status || 'PENDING'
+      if (status === 'SUCCEEDED' && !videoRecorded.has(taskId)) {
+        videoRecorded.add(taskId)
+        try {
+          addHistoryRecord({
+            type: 'video',
+            model: meta.model,
+            prompt: meta.prompt,
+            output: pollData.output?.video_url || '',
+            meta: { duration: meta.duration, task_id: taskId },
+          })
+        } catch {
+          // 历史记录失败不影响结果返回
+        }
+      }
+      return sendJson(res, 200, {
+        status,
+        model: meta.model,
+        duration: meta.duration,
+        prompt: meta.prompt,
+        video_url: status === 'SUCCEEDED' ? pollData.output?.video_url || '' : '',
+        error: status === 'FAILED' ? pollData.output?.message || pollData.message || '视频生成失败' : '',
+      })
+    } catch (err) {
+      return sendJson(res, 502, {
+        error: '任务状态查询失败',
+        detail: String(err.message || err),
+      })
+    }
+  }
+
+  if (req.method === 'GET' && url.pathname.startsWith('/api/v1/video/download/')) {
+    const taskId = decodeURIComponent(url.pathname.slice('/api/v1/video/download/'.length))
+    const apiKey = resolveApiKey(req)
+    if (!apiKey) {
+      return sendJson(res, 401, { error: 'API Key 未配置' })
+    }
+    try {
+      const poll = await fetch(`${BASE}/api/v1/tasks/${taskId}`, {
+        headers: { Authorization: `Bearer ${apiKey}` },
+      })
+      const pollData = await poll.json()
+      const videoUrl = pollData.output?.video_url || ''
+      if (pollData.output?.task_status !== 'SUCCEEDED' || !videoUrl) {
+        return sendJson(res, 404, { error: '视频尚未生成完成' })
+      }
+      const up = await fetch(videoUrl)
+      if (!up.ok) {
+        return sendJson(res, 502, { error: '视频文件获取失败' })
+      }
+      const buf = Buffer.from(await up.arrayBuffer())
+      res.writeHead(200, {
+        'Content-Type': up.headers.get('content-type') || 'video/mp4',
+        'Content-Length': buf.length,
+        'Content-Disposition': `attachment; filename="qwen-video-${taskId.slice(0, 8)}.mp4"`,
+      })
+      res.end(buf)
+      return
+    } catch (err) {
+      return sendJson(res, 502, {
+        error: '视频下载失败',
+        detail: String(err.message || err),
+      })
+    }
   }
 
   if (req.method === 'POST' && url.pathname === '/api/v1/audio') {
