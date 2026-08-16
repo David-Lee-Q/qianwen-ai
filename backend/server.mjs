@@ -610,6 +610,29 @@ const server = http.createServer(async (req, res) => {
     if (!body) return sendJson(res, 400, { error: '请求体不是合法 JSON' })
     const model = body.model || 'wan2.6-t2i'
     const onSuccess = () => quotaInc(req, 'image')
+    // qwen-image-3.0 系列走多模态生成接口（size 格式为 <width>*<height>）
+    if (model.startsWith('qwen-image-3.0')) {
+      const payload = {
+        model,
+        input: {
+          messages: [{ role: 'user', content: [{ text: body.prompt }] }],
+        },
+        parameters: {
+          size: body.size || '1024*1024',
+          n: body.count || 1,
+        },
+      }
+      if (body.negative_prompt) {
+        payload.parameters.negative_prompt = body.negative_prompt
+      }
+      return proxyUpstream(
+        res,
+        '/api/v1/services/aigc/multimodal-generation/generation',
+        payload,
+        resolveApiKey(req),
+        { onSuccess },
+      )
+    }
     if (model.startsWith('wan') || model.startsWith('qwen-image-2.0')) {
       const payload = {
         model,
