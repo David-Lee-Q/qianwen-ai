@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import { ScanEye, UploadCloud, ImageUp, FileText, Tag, X } from 'lucide-react'
-import { mockApi } from '../services/mockApi.js'
+import { mockApi, getApiMode } from '../services/mockApi.js'
 import {
   Card,
   Button,
@@ -8,6 +8,7 @@ import {
   EmptyState,
   Spinner,
   Badge,
+  ModeRestrictedBanner,
 } from '../components/ui.jsx'
 
 const VISION_MODELS = [
@@ -22,6 +23,7 @@ export default function Vision() {
   const [fileName, setFileName] = useState('')
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState(null)
+  const [error, setError] = useState('')
   const fileRef = useRef(null)
 
   function handleFile(e) {
@@ -38,9 +40,12 @@ export default function Vision() {
     if (!preview || loading) return
     setLoading(true)
     setResult(null)
+    setError('')
     try {
-      const res = await mockApi.analyzeImage(fileName, { model })
+      const res = await mockApi.analyzeImage(preview, fileName, { model })
       setResult(res)
+    } catch (err) {
+      setError(err?.message || '分析失败，请稍后重试。')
     } finally {
       setLoading(false)
     }
@@ -54,7 +59,9 @@ export default function Vision() {
   }
 
   return (
-    <div className="flex flex-col gap-4 lg:h-[calc(100vh-10rem)] lg:flex-row lg:gap-6">
+    <div className="space-y-4">
+      {getApiMode() === 'builtin' && <ModeRestrictedBanner />}
+      <div className="flex flex-col gap-4 lg:h-[calc(100vh-10rem)] lg:flex-row lg:gap-6">
       <Card className="flex w-full shrink-0 flex-col lg:w-[340px]">
         <div className="border-b border-slate-100 p-5">
           <h3 className="text-base font-semibold text-slate-900">上传图片</h3>
@@ -139,6 +146,12 @@ export default function Vision() {
           {result && <Badge color="bg-emerald-50 text-emerald-600">分析完成</Badge>}
         </div>
 
+        {error && (
+          <div className="mx-4 mt-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-600 sm:mx-6">
+            {error}
+          </div>
+        )}
+
         {!result && !loading ? (
           <EmptyState
             icon={<ImageUp className="h-6 w-6" aria-hidden="true" />}
@@ -204,6 +217,7 @@ export default function Vision() {
           </div>
         )}
       </Card>
+      </div>
     </div>
   )
 }

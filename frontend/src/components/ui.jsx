@@ -9,6 +9,30 @@ export function Card({ children, className = '', ...rest }) {
   )
 }
 
+export function ModeRestrictedBanner() {
+  return (
+    <div className="flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+      <svg
+        className="mt-0.5 h-4 w-4 shrink-0 text-amber-500"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
+      >
+        <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+        <line x1="12" y1="9" x2="12" y2="13" />
+        <line x1="12" y1="17" x2="12.01" y2="17" />
+      </svg>
+      <p className="text-sm leading-relaxed text-amber-800">
+        内置模型模式暂不支持此功能，请配置自定义 API-Key 后使用（前往「认证与设置」页切换自定义模型并填写您的 Key）。
+      </p>
+    </div>
+  )
+}
+
 export function CardHeader({ title, subtitle, action }) {
   return (
     <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-6 py-5">
@@ -63,6 +87,7 @@ export function Input({
   hint,
   className = '',
   id,
+  disabled,
   ...rest
 }) {
   return (
@@ -74,7 +99,8 @@ export function Input({
       )}
       <input
         id={id}
-        className={`w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none ${className}`}
+        disabled={disabled}
+        className={`w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400 ${className}`}
         {...rest}
       />
       {hint && <span className="mt-1.5 block text-xs text-slate-400">{hint}</span>}

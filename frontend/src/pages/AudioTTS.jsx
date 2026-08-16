@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import { AudioLines, Play, Square, Download } from 'lucide-react'
-import { mockApi } from '../services/mockApi.js'
+import { mockApi, getApiMode } from '../services/mockApi.js'
 import {
   Card,
   Button,
@@ -9,14 +9,13 @@ import {
   EmptyState,
   Spinner,
   Badge,
+  ModeRestrictedBanner,
 } from '../components/ui.jsx'
 
 const VOICES = [
-  { id: '晴光', label: '晴光 · 温暖女声（推荐）' },
-  { id: '云泽', label: '云泽 · 沉稳男声' },
-  { id: '灵犀', label: '灵犀 · 元气女声' },
-  { id: '清越', label: '清越 · 清澈少年' },
-  { id: '晨曦', label: '晨曦 · 温柔旁白' },
+  { id: 'Cherry', label: 'Cherry · 温暖女声（推荐）' },
+  { id: 'Ethan', label: 'Ethan · 沉稳男声' },
+  { id: 'Serena', label: 'Serena · 知性女声' },
 ]
 
 const SAMPLES = [
@@ -63,12 +62,13 @@ function playTone(durationSec = 3, speed = 1) {
 
 export default function AudioTTS() {
   const [text, setText] = useState('')
-  const [voice, setVoice] = useState('晴光')
+  const [voice, setVoice] = useState('Cherry')
   const [speed, setSpeed] = useState(1)
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState(null)
   const [playing, setPlaying] = useState(false)
   const ctxRef = useRef(null)
+  const audioRef = useRef(null)
 
   async function synthesize() {
     const t = text.trim()
@@ -84,6 +84,8 @@ export default function AudioTTS() {
   }
 
   function stop() {
+    audioRef.current?.pause()
+    audioRef.current = null
     ctxRef.current?.ctx.close()
     ctxRef.current = null
     setPlaying(false)
@@ -94,6 +96,17 @@ export default function AudioTTS() {
       stop()
       return
     }
+    if (result?.audioUrl) {
+      const audio = new Audio(result.audioUrl)
+      audioRef.current = audio
+      audio.onended = () => setPlaying(false)
+      audio.onerror = () => setPlaying(false)
+      audio
+        .play()
+        .then(() => setPlaying(true))
+        .catch(() => setPlaying(false))
+      return
+    }
     const tone = playTone(result?.duration ? 4 : 3, speed)
     ctxRef.current = tone
     setPlaying(true)
@@ -101,7 +114,9 @@ export default function AudioTTS() {
   }
 
   return (
-    <div className="flex flex-col gap-4 lg:h-[calc(100vh-10rem)] lg:flex-row lg:gap-6">
+    <div className="space-y-4">
+      {getApiMode() === 'builtin' && <ModeRestrictedBanner />}
+      <div className="flex flex-col gap-4 lg:h-[calc(100vh-10rem)] lg:flex-row lg:gap-6">
       <Card className="flex w-full shrink-0 flex-col lg:w-[320px] lg:overflow-y-auto">
         <div className="border-b border-slate-100 p-5">
           <h3 className="text-base font-semibold text-slate-900">合成配置</h3>
@@ -207,18 +222,21 @@ export default function AudioTTS() {
               <Button
                 variant="secondary"
                 className="w-full shrink-0 sm:w-auto"
-                onClick={() => setPlaying(false)}
+                onClick={() => (result?.audioUrl ? window.open(result.audioUrl, '_blank') : stop())}
               >
                 <Download className="h-4 w-4" aria-hidden="true" />
                 下载
               </Button>
             </div>
-            <p className="text-xs text-slate-400">
-              当前为演示音效，接入真实 TTS API 后将输出完整合成音频。
-            </p>
+            {!result?.audioUrl && (
+              <p className="text-xs text-slate-400">
+                当前为演示音效，接入真实 TTS API 后将输出完整合成音频。
+              </p>
+            )}
           </div>
         )}
       </Card>
+      </div>
     </div>
   )
 }

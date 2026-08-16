@@ -72,6 +72,9 @@ __pycache__/
 output/
 tmp/
 
+### Runtime logs ###
+logs/
+
 ### ETC ###
 docs
 ref

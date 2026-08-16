@@ -1,6 +1,11 @@
 import { useEffect, useState } from 'react'
-import { ChartColumn, Coins, Wallet, Percent } from 'lucide-react'
-import { mockApi } from '../services/mockApi.js'
+import { ChartColumn, Coins, Wallet, Percent, KeyRound } from 'lucide-react'
+import {
+  mockApi,
+  formatTokens,
+  mapUsageSummary,
+  getApiMode,
+} from '../services/mockApi.js'
 import { Card, CardHeader, Badge, Spinner } from '../components/ui.jsx'
 
 function TrendChart({ data }) {
@@ -31,7 +36,7 @@ function TrendChart({ data }) {
 }
 
 function Donut({ parts }) {
-  const total = parts.reduce((s, p) => s + p.value, 0)
+  const total = parts.reduce((s, p) => s + p.value, 0) || 1
   let acc = 0
   const segments = parts.map((p) => {
     const start = acc
@@ -65,7 +70,9 @@ function Donut({ parts }) {
               style={{ background: COLORS[i % COLORS.length] }}
             />
             <span className="flex-1 truncate text-slate-600">{p.name}</span>
-            <span className="font-semibold text-slate-800">{p.value}%</span>
+            <span className="font-semibold text-slate-800">
+              {Math.round((p.value / total) * 100)}%
+            </span>
           </li>
         ))}
       </ul>
@@ -78,8 +85,21 @@ export default function Usage() {
 
   useEffect(() => {
     let alive = true
+    if (getApiMode() === 'builtin') {
+      setData({ builtinOnly: true })
+      return () => {
+        alive = false
+      }
+    }
     mockApi.getUsage().then((res) => {
-      if (alive) setData(res)
+      if (!alive) return
+      if (res.available === false) {
+        setData({ real: true, unavailable: true, reason: res.reason, verificationUrl: res.verificationUrl, hint: res.hint })
+      } else if (res.available === true) {
+        setData(mapUsageSummary(res.summary))
+      } else {
+        setData(res)
+      }
     })
     return () => {
       alive = false
@@ -91,6 +111,56 @@ export default function Usage() {
       <div className="flex h-64 items-center justify-center">
         <Spinner className="h-8 w-8 text-primary" />
       </div>
+    )
+  }
+
+  if (data.builtinOnly) {
+    return (
+      <Card className="mx-auto max-w-lg p-8 text-center">
+        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50 text-primary">
+          <KeyRound className="h-7 w-7" aria-hidden="true" />
+        </div>
+        <h3 className="text-lg font-semibold text-slate-900">内置模型模式不支持用量账单</h3>
+        <p className="mt-2 text-sm leading-relaxed text-slate-500">
+          内置模型模式仅开放文本对话与图像生成的免费体验额度，用量账单暂不支持查看。
+        </p>
+        <p className="mt-3 rounded-xl bg-amber-50 px-4 py-2.5 text-sm font-medium text-amber-700">
+          请配置自定义 API-Key 后使用
+        </p>
+      </Card>
+    )
+  }
+
+  if (data.unavailable) {
+    return (
+      <Card className="mx-auto max-w-lg p-8 text-center">
+        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50 text-primary">
+          <Wallet className="h-7 w-7" aria-hidden="true" />
+        </div>
+        <h3 className="text-lg font-semibold text-slate-900">
+          {data.reason === 'needs_login' ? '需要登录 QianWen CLI' : '用量数据不可用'}
+        </h3>
+        <p className="mt-2 text-sm leading-relaxed text-slate-500">
+          {data.reason === 'needs_login'
+            ? '用量账单通过 QianWen CLI 查询，需要先在浏览器中完成设备授权。'
+            : data.hint || '请检查服务器上的 QianWen CLI 状态。'}
+        </p>
+        {data.verificationUrl && (
+          <a
+            href={data.verificationUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="mt-4 inline-flex items-center justify-center rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary-dark"
+          >
+            前往授权
+          </a>
+        )}
+        {data.reason === 'needs_login' && (
+          <p className="mt-4 text-xs text-slate-400">
+            授权完成后刷新本页面即可看到用量数据（后台会自动检测登录状态）。
+          </p>
+        )}
+      </Card>
     )
   }
 
@@ -138,17 +208,51 @@ export default function Usage() {
       <div className="grid gap-6 lg:grid-cols-5">
         <Card className="lg:col-span-3">
           <CardHeader
-            title="Token 消耗趋势"
-            subtitle="最近 12 天的日均消耗（单位：万 Token）"
+            title={data.tokenTrend.length ? 'Token 消耗趋势' : '免费额度'}
+            subtitle={
+              data.tokenTrend.length
+                ? '最近 12 天的日均消耗（单位：万 Token）'
+                : '各模型本月剩余免费额度'
+            }
             action={<Badge color="bg-blue-50 text-blue-600">{data.month}</Badge>}
           />
           <div className="px-6 pb-6">
-            <TrendChart data={data.tokenTrend} />
+            {data.tokenTrend.length ? (
+              <TrendChart data={data.tokenTrend} />
+            ) : (
+              <ul className="space-y-3">
+                {data.freeTier.length ? (
+                  data.freeTier.map((f, i) => (
+                    <li
+                      key={i}
+                      className="flex items-center justify-between rounded-xl border border-slate-100 px-4 py-3"
+                    >
+                      <div>
+                        <p className="text-sm font-medium text-slate-800">
+                          {f.model_id}
+                        </p>
+                        <p className="mt-0.5 text-xs text-slate-400">
+                          剩余 {formatTokens(f.remaining)} /{' '}
+                          {formatTokens(f.total)} {f.unit}
+                        </p>
+                      </div>
+                      <span className="text-sm font-semibold text-slate-700">
+                        {f.used_pct}%
+                      </span>
+                    </li>
+                  ))
+                ) : (
+                  <li className="py-8 text-center text-sm text-slate-400">
+                    暂无免费额度数据
+                  </li>
+                )}
+              </ul>
+            )}
           </div>
         </Card>
 
         <Card className="lg:col-span-2">
-          <CardHeader title="模型占比" subtitle="按消费量占比" />
+          <CardHeader title="模型占比" subtitle="按消费金额占比" />
           <div className="px-6 pb-6">
             <Donut parts={data.modelBreakdown} />
           </div>

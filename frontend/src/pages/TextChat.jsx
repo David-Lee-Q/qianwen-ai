@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect } from 'react'
 import { Send, Sparkles, User, RotateCcw, Cpu } from 'lucide-react'
-import { mockApi, API_MODE } from '../services/mockApi.js'
+import { mockApi, getApiMode } from '../services/mockApi.js'
 import { Card, Select, Badge, Toggle, TypingIndicator } from '../components/ui.jsx'
 
 const CHAT_MODELS = [
@@ -77,11 +77,11 @@ export default function TextChat() {
             ),
           ),
       )
-    } catch {
+    } catch (err) {
       setMessages((prev) =>
         prev.map((m, i) =>
           i === prev.length - 1
-            ? { ...m, pending: false, content: '请求失败，请稍后重试。' }
+            ? { ...m, pending: false, content: err?.message || '请求失败，请稍后重试。' }
             : m,
         ),
       )
@@ -131,8 +131,13 @@ export default function TextChat() {
               当前模式
             </p>
             <p className="mt-1 text-xs leading-relaxed text-slate-400">
-              接口处于 {API_MODE === 'mock' ? 'Mock' : '真实'} 模式，返回为模拟数据，
-              已预留真实 API 接入点。
+              接口处于{' '}
+              {getApiMode() === 'mock'
+                ? 'Mock 演示'
+                : getApiMode() === 'custom'
+                  ? '自定义模型'
+                  : '内置模型'}{' '}
+              模式，可在「认证与设置」页切换。
             </p>
           </div>
         </div>

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Clapperboard, Play, Download } from 'lucide-react'
-import { mockApi } from '../services/mockApi.js'
+import { mockApi, getApiMode } from '../services/mockApi.js'
 import {
   Card,
   Button,
@@ -9,12 +9,15 @@ import {
   EmptyState,
   Spinner,
   Badge,
+  ModeRestrictedBanner,
 } from '../components/ui.jsx'
 
 const VIDEO_MODELS = [
-  { id: 'wan2.1-video-t2i-pro', label: 'Wan2.1 Video T2I Pro（推荐）' },
-  { id: 'wan2.1-video-t2i-plus', label: 'Wan2.1 Video T2I Plus' },
-  { id: 'wan2.1-video-t2i-turbo', label: 'Wan2.1 Video T2I Turbo（快速）' },
+  { id: 'wan2.6-t2v', label: 'Wan2.6 T2V（推荐 · 含音频）' },
+  { id: 'wan2.7-t2v', label: 'Wan2.7 T2V（720P/1080P · 支持配音）' },
+  { id: 'wan2.5-t2v-preview', label: 'Wan2.5 T2V Preview（含音频）' },
+  { id: 'wan2.2-t2v-plus', label: 'Wan2.2 T2V Plus（静音 · 5秒）' },
+  { id: 'happyhorse-1.1-t2v', label: 'HappyHorse 1.1 T2V（含音频）' },
 ]
 
 const EXAMPLES = [
@@ -26,7 +29,7 @@ const EXAMPLES = [
 
 export default function VideoGen() {
   const [prompt, setPrompt] = useState('')
-  const [model, setModel] = useState('wan2.1-video-t2i-pro')
+  const [model, setModel] = useState('wan2.6-t2v')
   const [duration, setDuration] = useState(5)
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState(null)
@@ -46,7 +49,9 @@ export default function VideoGen() {
   }
 
   return (
-    <div className="flex flex-col gap-4 lg:h-[calc(100vh-10rem)] lg:flex-row lg:gap-6">
+    <div className="space-y-4">
+      {getApiMode() === 'builtin' && <ModeRestrictedBanner />}
+      <div className="flex flex-col gap-4 lg:h-[calc(100vh-10rem)] lg:flex-row lg:gap-6">
       <Card className="flex w-full shrink-0 flex-col lg:w-[320px] lg:overflow-y-auto">
         <div className="border-b border-slate-100 p-5">
           <h3 className="text-base font-semibold text-slate-900">视频配置</h3>
@@ -161,6 +166,7 @@ export default function VideoGen() {
           </div>
         )}
       </Card>
+      </div>
     </div>
   )
 }

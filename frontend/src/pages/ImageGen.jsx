@@ -44,12 +44,14 @@ export default function ImageGen() {
   const [seed, setSeed] = useState('')
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState(null)
+  const [error, setError] = useState('')
 
   async function generate() {
     const p = prompt.trim()
     if (!p || loading) return
     setLoading(true)
     setResult(null)
+    setError('')
     try {
       const res = await mockApi.generateImage(p, {
         model,
@@ -58,6 +60,8 @@ export default function ImageGen() {
         seed: seed ? Number(seed) : undefined,
       })
       setResult(res)
+    } catch (err) {
+      setError(err?.message || '生成失败，请稍后重试。')
     } finally {
       setLoading(false)
     }
@@ -167,6 +171,12 @@ export default function ImageGen() {
             </Badge>
           )}
         </div>
+
+        {error && (
+          <div className="mx-4 mt-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-600 sm:mx-6">
+            {error}
+          </div>
+        )}
 
         {!result && !loading ? (
           <EmptyState
