@@ -97,6 +97,15 @@ export default function ImageGen() {
         seed: seed ? Number(seed) : undefined,
       })
       setResult(res)
+      mockApi
+        .recordHistory({
+          type: 'image',
+          model: res.model,
+          prompt: p,
+          output: res.images.map((img) => img.url).join('\n'),
+          meta: { size: res.size, count: res.images.length },
+        })
+        .catch(() => {})
     } catch (err) {
       setError(err?.message || '生成失败，请稍后重试。')
     } finally {

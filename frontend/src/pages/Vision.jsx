@@ -81,6 +81,15 @@ export default function Vision() {
     try {
       const res = await mockApi.analyzeImage(preview, fileName, { model })
       setResult(res)
+      mockApi
+        .recordHistory({
+          type: 'vision',
+          model: res.model,
+          prompt: fileName,
+          output: res.summary,
+          meta: { tags: res.tags, ocr: res.ocr },
+        })
+        .catch(() => {})
     } catch (err) {
       setError(err?.message || '分析失败，请稍后重试。')
     } finally {

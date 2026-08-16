@@ -78,6 +78,15 @@ export default function AudioTTS() {
     try {
       const res = await mockApi.synthesizeSpeech(t, { voice, speed })
       setResult(res)
+      mockApi
+        .recordHistory({
+          type: 'audio',
+          model: 'qwen3-tts-flash',
+          prompt: t,
+          output: res.audioUrl || '',
+          meta: { voice: res.voice, duration: res.duration },
+        })
+        .catch(() => {})
     } finally {
       setLoading(false)
     }

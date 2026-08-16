@@ -9,6 +9,7 @@ import {
   ChartColumn,
   Settings,
   Sparkles,
+  History as HistoryIcon,
 } from 'lucide-react'
 import { NAV_ITEMS } from '../data/skills'
 
@@ -21,6 +22,7 @@ const ICONS = {
   ScanEye,
   Cpu,
   ChartColumn,
+  History: HistoryIcon,
   Settings,
 }
 

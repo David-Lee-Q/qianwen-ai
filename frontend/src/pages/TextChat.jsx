@@ -101,14 +101,24 @@ export default function TextChat() {
             ),
           ),
         res.text,
-        () =>
+        () => {
           setMessages((prev) =>
             prev.map((m, i) =>
               i === prev.length - 1
                 ? { ...m, stream: false, usage: res.usage, model: res.model }
                 : m,
             ),
-          ),
+          )
+          mockApi
+            .recordHistory({
+              type: 'text',
+              model: res.model || model,
+              prompt: content,
+              output: res.text,
+              meta: { usage: res.usage },
+            })
+            .catch(() => {})
+        },
       )
     } catch (err) {
       setMessages((prev) =>

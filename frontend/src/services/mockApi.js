@@ -395,4 +395,38 @@ export const mockApi = {
     if (isRealMode()) return getModelBenefits()
     return null
   },
+
+  // 历史记录：云端缓存，所有模式统一上报与查询
+  async recordHistory(record) {
+    const res = await fetch('/api/v1/history', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(record),
+    })
+    if (!res.ok) throw await toError(res)
+    return res.json()
+  },
+
+  async getHistory(params = {}) {
+    const q = new URLSearchParams()
+    if (params.type) q.set('type', params.type)
+    if (params.limit) q.set('limit', String(params.limit))
+    const res = await fetch(`/api/v1/history?${q.toString()}`)
+    if (!res.ok) throw await toError(res)
+    return res.json()
+  },
+
+  async deleteHistory(id) {
+    const res = await fetch(`/api/v1/history?id=${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    })
+    if (!res.ok) throw await toError(res)
+    return res.json()
+  },
+
+  async clearHistory() {
+    const res = await fetch('/api/v1/history', { method: 'DELETE' })
+    if (!res.ok) throw await toError(res)
+    return res.json()
+  },
 }

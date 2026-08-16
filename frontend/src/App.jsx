@@ -11,6 +11,7 @@ import AudioTTS from './pages/AudioTTS.jsx'
 import Vision from './pages/Vision.jsx'
 import Models from './pages/Models.jsx'
 import Usage from './pages/Usage.jsx'
+import History from './pages/History.jsx'
 import Settings from './pages/Settings.jsx'
 
 const PAGES = {
@@ -22,6 +23,7 @@ const PAGES = {
   vision: Vision,
   models: Models,
   usage: Usage,
+  history: History,
   settings: Settings,
 }
 

@@ -378,6 +378,47 @@ function scheduleBenefitsCheck() {
   }, next - now)
 }
 
+// ---- 历史记录：所有功能调用记录云端缓存（backend/data/history.json） ----
+const HISTORY_FILE = path.resolve(__dirname, 'data/history.json')
+const HISTORY_MAX = 500
+
+function loadHistory() {
+  try {
+    if (fs.existsSync(HISTORY_FILE)) {
+      const arr = JSON.parse(fs.readFileSync(HISTORY_FILE, 'utf8'))
+      return Array.isArray(arr) ? arr : []
+    }
+  } catch {
+    // 损坏则视为空
+  }
+  return []
+}
+
+function saveHistory(list) {
+  try {
+    fs.mkdirSync(path.dirname(HISTORY_FILE), { recursive: true })
+    fs.writeFileSync(HISTORY_FILE, JSON.stringify(list, null, 2))
+  } catch (err) {
+    console.error('历史记录写入失败:', err.message)
+  }
+}
+
+function addHistoryRecord(rec) {
+  const list = loadHistory()
+  const item = {
+    id: `h_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
+    type: rec.type,
+    model: rec.model || '',
+    prompt: String(rec.prompt || '').slice(0, 2000),
+    output: String(rec.output || '').slice(0, 5000),
+    meta: rec.meta && typeof rec.meta === 'object' ? rec.meta : {},
+    createdAt: new Date().toISOString(),
+  }
+  list.unshift(item)
+  saveHistory(list.slice(0, HISTORY_MAX))
+  return item
+}
+
 let loginCompleteRunning = false
 function startLoginComplete() {
   if (loginCompleteRunning) return
@@ -717,6 +758,32 @@ const server = http.createServer(async (req, res) => {
     const period = url.searchParams.get('period') || '24h'
     const pageSize = url.searchParams.get('pageSize') || '20'
     return getUsageLogs(res, period, pageSize)
+  }
+
+  // ---- 历史记录接口（云端缓存） ----
+  if (req.method === 'POST' && url.pathname === '/api/v1/history') {
+    const body = await readBody(req)
+    if (!body || !body.type) return sendJson(res, 400, { error: '缺少 type 字段' })
+    const item = addHistoryRecord(body)
+    return sendJson(res, 200, { ok: true, id: item.id })
+  }
+
+  if (req.method === 'GET' && url.pathname === '/api/v1/history') {
+    let list = loadHistory()
+    const type = url.searchParams.get('type')
+    if (type) list = list.filter((r) => r.type === type)
+    const limit = Math.min(Number(url.searchParams.get('limit') || 100), 500)
+    return sendJson(res, 200, { items: list.slice(0, limit) })
+  }
+
+  if (req.method === 'DELETE' && url.pathname === '/api/v1/history') {
+    const id = url.searchParams.get('id')
+    if (id) {
+      saveHistory(loadHistory().filter((r) => r.id !== id))
+      return sendJson(res, 200, { ok: true })
+    }
+    saveHistory([])
+    return sendJson(res, 200, { ok: true })
   }
 
   if (req.method === 'GET') {

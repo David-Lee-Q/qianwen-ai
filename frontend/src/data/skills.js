@@ -76,6 +76,7 @@ export const NAV_ITEMS = [
   { section: '平台' },
   { key: 'models', label: '模型选择', icon: 'Cpu' },
   { key: 'usage', label: '用量与账单', icon: 'ChartColumn' },
+  { key: 'history', label: '历史记录', icon: 'History' },
   { key: 'settings', label: '认证与设置', icon: 'Settings' },
 ]
 
@@ -88,5 +89,6 @@ export const PAGE_TITLES = {
   vision: '视觉理解',
   models: '模型选择',
   usage: '用量与账单',
+  history: '历史记录',
   settings: '认证与设置',
 }

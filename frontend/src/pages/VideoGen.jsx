@@ -80,6 +80,15 @@ export default function VideoGen() {
     try {
       const res = await mockApi.generateVideo(p, { model, duration })
       setResult(res)
+      mockApi
+        .recordHistory({
+          type: 'video',
+          model: res.model,
+          prompt: p,
+          output: res.url,
+          meta: { duration: res.duration, poster: res.poster },
+        })
+        .catch(() => {})
     } finally {
       setLoading(false)
     }
