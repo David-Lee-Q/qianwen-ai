@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { mockApi, isRealMode, getDefaultModels } from '../services/mockApi.js'
+import { mockApi, getApiMode, getApiKey, getDefaultModels } from '../services/mockApi.js'
 
 export function useModelBenefits() {
   const mode = getApiMode()
