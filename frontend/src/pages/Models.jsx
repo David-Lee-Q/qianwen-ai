@@ -196,14 +196,14 @@ export default function Models() {
       ) : (
         CATS.map((cat) => {
           const Icon = cat.icon
-          // 只展示有效免费额度模型（过滤过期/无额度）
-          const freeModels = catModels(benefits, cat.key).filter((m) => isFreeValid(m))
-          const isAudioEmpty = cat.key === 'audio' && freeModels.length === 0
-          const optionModels = isAudioEmpty ? [AUDIO_FALLBACK] : freeModels
+          // 展示该分类全部可用模型（免费额度有效或按量计费，已排除过期）
+          const availableModels = catModels(benefits, cat.key)
+          const isAudioEmpty = cat.key === 'audio' && availableModels.length === 0
+          const optionModels = isAudioEmpty ? [AUDIO_FALLBACK] : availableModels
           const auto = pickRecommended(benefits, cat.key)
           const autoId = auto?.id || (cat.key === 'audio' ? AUDIO_FALLBACK.id : '')
           const optionIds = new Set(optionModels.map((m) => m.id))
-          // 手动设置项若已被过滤（过期/无额度），回退到自动推荐，避免受控 select 无匹配选项而无法修改
+          // 手动设置项若已不可用，回退到自动推荐，避免受控 select 无匹配选项而无法修改
           const current =
             defaults[cat.key] && optionIds.has(defaults[cat.key])
               ? defaults[cat.key]
@@ -219,7 +219,7 @@ export default function Models() {
                     <div>
                       <h4 className="text-sm font-semibold text-slate-900">{cat.label}</h4>
                       <p className="text-xs text-slate-400">
-                        {freeModels.length} 个免费模型 · 系统自动识别额度与到期时间
+                        {availableModels.length} 个可用模型 · 系统自动识别额度与到期时间
                       </p>
                     </div>
                   </div>
@@ -235,7 +235,9 @@ export default function Models() {
                       {optionModels.map((m) => (
                         <option key={m.id} value={m.id}>
                           {m.id}
-                          {isFreeValid(m) ? `（${daysUntil(m.resetDate)} 天后到期）` : ''}
+                          {isFreeValid(m)
+                            ? `（${daysUntil(m.resetDate)} 天后到期）`
+                            : '（按量计费）'}
                         </option>
                       ))}
                     </Select>
@@ -255,7 +257,7 @@ export default function Models() {
                 {isAudioEmpty ? (
                   <div className="p-8 text-center">
                     <p className="text-sm font-medium text-slate-600">
-                      暂无可用的免费语音模型
+                      暂无可用的语音模型
                     </p>
                     <p className="mt-1 text-xs leading-relaxed text-slate-400">
                       语音合成默认使用 qwen3-tts-flash（无平台免费额度，按量计费）。
@@ -264,7 +266,7 @@ export default function Models() {
                   </div>
                 ) : (
                   <div className="grid gap-4 p-6 lg:grid-cols-2 xl:grid-cols-3">
-                    {sortModels(freeModels).map((m) => (
+                    {sortModels(availableModels).map((m) => (
                       <ModelCard key={m.id} m={m} isDefault={m.id === current} />
                     ))}
                   </div>

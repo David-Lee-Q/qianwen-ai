@@ -319,7 +319,7 @@ function computeDefaults(list) {
 }
 
 function refreshModelBenefits() {
-  const run = runCli(['models', 'list', '--format', 'json'])
+  const run = runCli(['models', 'list', '--all', '--verbose', '--format', 'json'])
   if (!run.ok) return { ok: false, reason: run.reason }
   try {
     const parsed = JSON.parse(run.stdout)
@@ -340,19 +340,24 @@ function refreshModelBenefits() {
         pricing: m.pricing?.summary?.unit || '',
       }
     })
+    // 可用模型 = 可试用且免费额度未过期；排除不匹配五类展示的专业工具模型（语音识别/向量/声音复刻采集等）
+    const SKIP = /embedding|rerank|paraformer|fun-asr|voice-enrollment|speech-biasing|qwen-vl-embedding/i
+    const usable = list.filter(
+      (m) => m.canTry && m.status !== 'expire' && !SKIP.test(m.id),
+    )
     const categories = {}
     for (const key of Object.keys(CATEGORY_LABEL)) {
       categories[key] = {
         label: CATEGORY_LABEL[key],
-        models: list.filter((m) => m.caps.includes(key)),
+        models: usable.filter((m) => m.caps.includes(key)),
       }
     }
     modelBenefits = {
       updatedAt: new Date().toISOString(),
       source: 'qianwen_cli',
-      models: list,
+      models: usable,
       categories,
-      defaults: computeDefaults(list),
+      defaults: computeDefaults(usable),
     }
     benefitsCheckedAt = Date.now()
     try {
