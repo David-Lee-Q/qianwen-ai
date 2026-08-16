@@ -1,5 +1,6 @@
 const MODE_KEY = 'qwen_console_api_mode'
 const API_KEY_KEY = 'qwen_console_api_key'
+const MODEL_TOKEN_KEY = 'qwen_model_token'
 
 export function getApiMode() {
   const mode = localStorage.getItem(MODE_KEY) || 'builtin'
@@ -20,6 +21,15 @@ export function getApiKey() {
 
 export function setApiKey(key) {
   localStorage.setItem(API_KEY_KEY, key)
+}
+
+export function getModelToken() {
+  return sessionStorage.getItem(MODEL_TOKEN_KEY) || ''
+}
+
+export function setModelToken(token) {
+  if (token) sessionStorage.setItem(MODEL_TOKEN_KEY, token)
+  else sessionStorage.removeItem(MODEL_TOKEN_KEY)
 }
 
 const DEFAULT_MODELS_KEY = 'qwen_console_default_models'
@@ -149,6 +159,9 @@ async function getModelBenefits() {
     const headers = {}
     if (getApiMode() === 'custom' && getApiKey()) {
       headers.Authorization = `Bearer ${getApiKey()}`
+    } else if (getApiMode() !== 'mock') {
+      const t = getModelToken()
+      if (t) headers['X-Model-Token'] = t
     }
     const res = await fetch('/api/v1/models/benefits', { headers })
     if (!res.ok) return null
@@ -160,6 +173,17 @@ async function getModelBenefits() {
   } catch {
     return null
   }
+}
+
+async function verifyModelPassword(password) {
+  const res = await fetch('/api/v1/models/verify', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ password }),
+  })
+  const data = await res.json()
+  if (data.ok && data.token) setModelToken(data.token)
+  return Boolean(data.ok)
 }
 
 async function realVideo(prompt, { model = 'wan2.6-t2v', duration = 5 } = {}) {
@@ -401,6 +425,10 @@ export const mockApi = {
   async getModelBenefits() {
     if (isRealMode()) return getModelBenefits()
     return null
+  },
+
+  async verifyModelPassword(password) {
+    return verifyModelPassword(password)
   },
 
   // 历史记录：云端缓存，所有模式统一上报与查询

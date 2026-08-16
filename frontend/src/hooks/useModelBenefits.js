@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { mockApi, getApiMode, getApiKey, getDefaultModels } from '../services/mockApi.js'
 
 export function useModelBenefits() {
@@ -6,6 +6,8 @@ export function useModelBenefits() {
   const hasKey = Boolean(getApiKey())
   const [benefits, setBenefits] = useState(null)
   const [error, setError] = useState(null)
+  const [nonce, setNonce] = useState(0)
+  const refresh = useCallback(() => setNonce((n) => n + 1), [])
   useEffect(() => {
     let alive = true
     setBenefits(null)
@@ -32,8 +34,8 @@ export function useModelBenefits() {
     return () => {
       alive = false
     }
-  }, [mode, hasKey])
-  return { benefits, error, mode, hasKey }
+  }, [mode, hasKey, nonce])
+  return { benefits, error, mode, hasKey, refresh }
 }
 
 export function catModels(benefits, category) {
@@ -95,6 +97,9 @@ export function resolveDefaultModel(benefits, category, fallback) {
 
 export function formatFreeTier(m) {
   if (!m) return null
+  if (m.masked) {
+    return { label: '免费额度', status: 'masked' }
+  }
   if (isFreeValid(m)) {
     const d = daysUntil(m.resetDate)
     const pct = m.usedPct != null ? m.usedPct : 0

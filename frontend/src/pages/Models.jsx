@@ -13,8 +13,10 @@ import {
   RefreshCw,
   KeyRound,
   ArrowRight,
+  EyeOff,
+  ShieldCheck,
 } from 'lucide-react'
-import { Card, Badge, Select, Spinner } from '../components/ui.jsx'
+import { Card, Badge, Select, Spinner, Button, Input } from '../components/ui.jsx'
 import { getApiMode, getDefaultModels, setDefaultModels, mockApi } from '../services/mockApi.js'
 import { MODELS } from '../data/models.js'
 import {
@@ -65,6 +67,14 @@ function quotaBadge(ft) {
       <Badge color="bg-slate-100 text-slate-500">
         <Gauge className="h-3 w-3" aria-hidden="true" />
         无免费额度
+      </Badge>
+    )
+  }
+  if (ft.status === 'masked') {
+    return (
+      <Badge color="bg-slate-100 text-slate-500">
+        <EyeOff className="h-3 w-3" aria-hidden="true" />
+        信息已隐藏
       </Badge>
     )
   }
@@ -158,6 +168,17 @@ function ModelCard({ m, isDefault }) {
           </div>
         </div>
       )}
+      {ft && ft.status === 'masked' && (
+        <div className="mt-3 space-y-1.5 border-t border-slate-100 pt-3 text-xs">
+          {['免费额度', '已消耗', '剩余额度', '到期时间'].map((k) => (
+            <div key={k} className="flex justify-between">
+              <span className="text-slate-500">{k}</span>
+              <span className="font-semibold tracking-widest text-slate-400">****</span>
+            </div>
+          ))}
+          <p className="pt-1 text-[11px] text-slate-400">输入密码后展示完整信息</p>
+        </div>
+      )}
       {ft && ft.status === 'expired' && (
         <p className="mt-2 border-t border-slate-100 pt-2 text-xs text-slate-400">
           免费额度已于 {new Date(ft.resetDate).toLocaleDateString('zh-CN')} 过期
@@ -167,11 +188,81 @@ function ModelCard({ m, isDefault }) {
   )
 }
 
+function ModelPasswordModal({ open, onClose, onSuccess }) {
+  const [password, setPassword] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  if (!open) return null
+  async function submit(e) {
+    e.preventDefault()
+    if (!password) return
+    setBusy(true)
+    setError('')
+    try {
+      const ok = await mockApi.verifyModelPassword(password)
+      if (ok) {
+        onSuccess()
+        onClose()
+      } else {
+        setError('密码错误，请重试')
+      }
+    } catch {
+      setError('验证失败，请稍后重试')
+    } finally {
+      setBusy(false)
+    }
+  }
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 px-4"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+    >
+      <div
+        className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center gap-2.5">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 text-primary">
+            <ShieldCheck className="h-5 w-5" aria-hidden="true" />
+          </div>
+          <div>
+            <h3 className="text-sm font-semibold text-slate-900">输入查看密码</h3>
+            <p className="text-xs text-slate-400">内置模型模式下查看完整模型信息需验证</p>
+          </div>
+        </div>
+        <form className="mt-4" onSubmit={submit}>
+          <Input
+            id="model-password"
+            type="password"
+            placeholder="请输入查看密码"
+            autoFocus
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+          {error && <p className="mt-2 text-xs text-rose-600">{error}</p>}
+          <div className="mt-4 flex justify-end gap-2">
+            <Button type="button" variant="secondary" onClick={onClose}>
+              取消
+            </Button>
+            <Button type="submit" disabled={busy || !password}>
+              {busy ? '验证中…' : '确认'}
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
 export default function Models({ onNavigate }) {
   const [defaults, setDefaults] = useState(getDefaultModels())
-  const { benefits, error, mode, hasKey } = useModelBenefits()
+  const [pwOpen, setPwOpen] = useState(false)
+  const { benefits, error, mode, hasKey, refresh } = useModelBenefits()
   const isMock = mode === 'mock'
   const custom = mode === 'custom'
+  const masked = benefits?.masked === true
 
   function handleDefaultChange(cat, id) {
     const next = { ...defaults, [cat]: id }
@@ -239,6 +330,19 @@ export default function Models({ onNavigate }) {
         </div>
       </Card>
 
+      {masked && (
+        <Card className="flex flex-wrap items-center justify-between gap-3 p-4">
+          <div className="flex items-center gap-2.5 text-sm text-slate-600">
+            <EyeOff className="h-4 w-4 shrink-0 text-slate-400" aria-hidden="true" />
+            <span>模型关键信息已加密隐藏，输入查看密码后展示完整额度与到期信息</span>
+          </div>
+          <Button type="button" onClick={() => setPwOpen(true)}>
+            <KeyRound className="h-4 w-4" aria-hidden="true" />
+            输入密码
+          </Button>
+        </Card>
+      )}
+
       {!benefits ? (
         error ? (
           <div className="flex h-40 flex-col items-center justify-center gap-2 rounded-2xl bg-white shadow-sm">
@@ -294,7 +398,9 @@ export default function Models({ onNavigate }) {
                           {m.id}
                           {isFreeValid(m)
                             ? `（${daysUntil(m.resetDate)} 天后到期）`
-                            : '（按量计费）'}
+                            : m.masked
+                              ? '（信息已隐藏）'
+                              : '（按量计费）'}
                         </option>
                       ))}
                     </Select>
@@ -333,6 +439,11 @@ export default function Models({ onNavigate }) {
           )
         })
       )}
+      <ModelPasswordModal
+        open={pwOpen}
+        onClose={() => setPwOpen(false)}
+        onSuccess={refresh}
+      />
     </div>
   )
 }

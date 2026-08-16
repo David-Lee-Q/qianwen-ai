@@ -1,6 +1,7 @@
 import http from 'node:http'
 import fs from 'node:fs'
 import path from 'node:path'
+import crypto from 'node:crypto'
 import { fileURLToPath } from 'node:url'
 import { execFileSync, spawn } from 'node:child_process'
 
@@ -30,6 +31,10 @@ loadEnv(ENV_FILE)
 
 const API_KEY = process.env.DASHSCOPE_API_KEY || process.env.QIANWEN_API_KEY || ''
 const BASE = (process.env.QWEN_BASE_URL || 'https://dashscope.aliyuncs.com').replace(/\/$/, '')
+
+// 内置模式模型中心查看密码（默认 014925，可用 MODEL_PASSWORD 覆盖）；未验证时模型关键信息模糊展示
+const MODEL_PASSWORD = process.env.MODEL_PASSWORD || '014925'
+const verifiedTokens = new Set()
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -435,6 +440,33 @@ function refreshModelBenefits() {
   }
 }
 
+// 未鉴权时模糊模型关键信息：额度/消耗/到期/状态/计费均打码，仅保留模型标识与能力
+function maskBenefits(b) {
+  const mask = (m) => ({
+    ...m,
+    masked: true,
+    status: '',
+    unit: '',
+    remaining: null,
+    total: null,
+    usedPct: null,
+    consumed: null,
+    resetDate: null,
+    pricing: '',
+  })
+  return {
+    ...b,
+    masked: true,
+    models: b.models.map(mask),
+    categories: Object.fromEntries(
+      Object.entries(b.categories).map(([key, val]) => [
+        key,
+        { label: val.label, models: val.models.map(mask) },
+      ]),
+    ),
+  }
+}
+
 function scheduleBenefitsCheck() {
   const now = new Date()
   const next = new Date(now)
@@ -828,6 +860,17 @@ const server = http.createServer(async (req, res) => {
     return
   }
 
+  if (req.method === 'POST' && url.pathname === '/api/v1/models/verify') {
+    const body = await readBody(req)
+    const password = String(body?.password || '')
+    if (password && password === MODEL_PASSWORD) {
+      const token = crypto.randomBytes(16).toString('hex')
+      verifiedTokens.add(token)
+      return sendJson(res, 200, { ok: true, token })
+    }
+    return sendJson(res, 200, { ok: false })
+  }
+
   if (req.method === 'GET' && url.pathname === '/api/v1/models/benefits') {
     const customKey = bearerKey(req)
     if (customKey) {
@@ -845,6 +888,13 @@ const server = http.createServer(async (req, res) => {
       const r = refreshModelBenefits()
       if (!r.ok && !modelBenefits) {
         return sendJson(res, 200, { available: false, reason: r.reason })
+      }
+    }
+    if (!customKey) {
+      // 内置模型模式：未通过密码验证时返回模糊数据
+      const authed = verifiedTokens.has(String(req.headers['x-model-token'] || ''))
+      if (!authed) {
+        return sendJson(res, 200, { available: true, ...maskBenefits(modelBenefits) })
       }
     }
     return sendJson(res, 200, { available: true, ...modelBenefits })
