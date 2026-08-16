@@ -47,7 +47,7 @@ export default function ImageGen() {
   const [result, setResult] = useState(null)
   const [error, setError] = useState('')
   const modelTouched = useRef(false)
-  const benefits = useModelBenefits()
+  const { benefits } = useModelBenefits()
 
   useEffect(() => {
     if (!benefits) return

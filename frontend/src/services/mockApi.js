@@ -146,9 +146,16 @@ async function getHealth() {
 
 async function getModelBenefits() {
   try {
-    const res = await fetch('/api/v1/models/benefits')
+    const headers = {}
+    if (getApiMode() === 'custom' && getApiKey()) {
+      headers.Authorization = `Bearer ${getApiKey()}`
+    }
+    const res = await fetch('/api/v1/models/benefits', { headers })
     if (!res.ok) return null
     const data = await res.json()
+    if (!data.available && data.reason === 'key_invalid') {
+      throw new Error(data.hint || 'API Key 无效，请检查后重试')
+    }
     return data.available ? data : null
   } catch {
     return null

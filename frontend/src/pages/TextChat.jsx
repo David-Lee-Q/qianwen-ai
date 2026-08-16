@@ -41,7 +41,7 @@ export default function TextChat() {
   const [busy, setBusy] = useState(false)
   const bottomRef = useRef(null)
   const modelTouched = useRef(false)
-  const benefits = useModelBenefits()
+  const { benefits } = useModelBenefits()
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })

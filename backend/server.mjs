@@ -342,6 +342,21 @@ function computeDefaults(list) {
   return defaults
 }
 
+// 校验 API Key 有效性（调官方模型列表接口，401 即无效）
+async function validateApiKey(key) {
+  try {
+    const res = await fetch(`${BASE}/api/v1/models?page_size=1`, {
+      headers: { Authorization: `Bearer ${key}` },
+    })
+    if (res.status === 401) {
+      return { ok: false, hint: 'API Key 无效或已过期，请在设置页检查后重试' }
+    }
+    return { ok: true }
+  } catch {
+    return { ok: false, hint: '无法连接官方服务，请稍后重试' }
+  }
+}
+
 function refreshModelBenefits() {
   // 数据源与官方平台 benefits 页面一致：usage free-tier（免费额度+已消耗+剩余比例+到期时间）
   const ftRun = runCli(['usage', 'free-tier', '--format', 'json'])
@@ -814,7 +829,19 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (req.method === 'GET' && url.pathname === '/api/v1/models/benefits') {
-    if (!modelBenefits || Date.now() - benefitsCheckedAt > BENEFITS_CACHE_TTL) {
+    const customKey = bearerKey(req)
+    if (customKey) {
+      // 自定义模型模式：按该 Key 实时校验并刷新（免费额度明细官方无按 Key 的公开接口，
+      // 数据来自服务端 CLI 账号；同一账号下即为该 Key 的额度）
+      const check = await validateApiKey(customKey)
+      if (!check.ok) {
+        return sendJson(res, 200, { available: false, reason: 'key_invalid', hint: check.hint })
+      }
+      const r = refreshModelBenefits()
+      if (!r.ok && !modelBenefits) {
+        return sendJson(res, 200, { available: false, reason: r.reason })
+      }
+    } else if (!modelBenefits || Date.now() - benefitsCheckedAt > BENEFITS_CACHE_TTL) {
       const r = refreshModelBenefits()
       if (!r.ok && !modelBenefits) {
         return sendJson(res, 200, { available: false, reason: r.reason })

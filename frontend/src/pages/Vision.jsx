@@ -27,7 +27,7 @@ export default function Vision() {
   const [error, setError] = useState('')
   const fileRef = useRef(null)
   const modelTouched = useRef(false)
-  const benefits = useModelBenefits()
+  const { benefits } = useModelBenefits()
 
   useEffect(() => {
     if (!benefits) return

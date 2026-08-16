@@ -2,11 +2,21 @@ import { useEffect, useState } from 'react'
 import { mockApi, isRealMode, getDefaultModels } from '../services/mockApi.js'
 
 export function useModelBenefits() {
+  const mode = getApiMode()
+  const hasKey = Boolean(getApiKey())
   const [benefits, setBenefits] = useState(null)
+  const [error, setError] = useState(null)
   useEffect(() => {
     let alive = true
-    if (!isRealMode()) {
-      setBenefits(null)
+    setBenefits(null)
+    setError(null)
+    if (mode === 'mock') {
+      return () => {
+        alive = false
+      }
+    }
+    // 自定义模式未配置 Key：不请求，由页面引导先配置
+    if (mode === 'custom' && !hasKey) {
       return () => {
         alive = false
       }
@@ -16,12 +26,14 @@ export function useModelBenefits() {
       .then((d) => {
         if (alive) setBenefits(d)
       })
-      .catch(() => {})
+      .catch((e) => {
+        if (alive) setError(e?.message || '模型信息加载失败')
+      })
     return () => {
       alive = false
     }
-  }, [])
-  return benefits
+  }, [mode, hasKey])
+  return { benefits, error, mode, hasKey }
 }
 
 export function catModels(benefits, category) {

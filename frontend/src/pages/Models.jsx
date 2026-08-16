@@ -11,6 +11,8 @@ import {
   Clock3,
   Gauge,
   RefreshCw,
+  KeyRound,
+  ArrowRight,
 } from 'lucide-react'
 import { Card, Badge, Select, Spinner } from '../components/ui.jsx'
 import { getApiMode, getDefaultModels, setDefaultModels, mockApi } from '../services/mockApi.js'
@@ -165,10 +167,9 @@ function ModelCard({ m, isDefault }) {
   )
 }
 
-export default function Models() {
+export default function Models({ onNavigate }) {
   const [defaults, setDefaults] = useState(getDefaultModels())
-  const benefits = useModelBenefits()
-  const mode = getApiMode()
+  const { benefits, error, mode, hasKey } = useModelBenefits()
   const isMock = mode === 'mock'
   const custom = mode === 'custom'
 
@@ -180,6 +181,31 @@ export default function Models() {
 
   if (isMock) {
     return <MockModels />
+  }
+
+  if (custom && !hasKey) {
+    return (
+      <Card className="p-8">
+        <div className="mx-auto max-w-md text-center">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50 text-primary">
+            <KeyRound className="h-7 w-7" aria-hidden="true" />
+          </div>
+          <h3 className="mt-4 text-base font-semibold text-slate-900">请先配置 API Key</h3>
+          <p className="mt-2 text-sm leading-relaxed text-slate-500">
+            自定义模型模式下，模型列表与免费额度将基于您的 API-Key 实时查询。请先在设置页填入
+            Key 后刷新查看。
+          </p>
+          <button
+            type="button"
+            onClick={() => onNavigate && onNavigate('settings')}
+            className="mt-5 inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white transition hover:opacity-90"
+          >
+            前往设置页配置 Key
+            <ArrowRight className="h-4 w-4" aria-hidden="true" />
+          </button>
+        </div>
+      </Card>
+    )
   }
 
   return (
@@ -214,9 +240,16 @@ export default function Models() {
       </Card>
 
       {!benefits ? (
-        <div className="flex h-40 items-center justify-center rounded-2xl bg-white shadow-sm">
-          <Spinner className="h-8 w-8 text-primary" />
-        </div>
+        error ? (
+          <div className="flex h-40 flex-col items-center justify-center gap-2 rounded-2xl bg-white shadow-sm">
+            <p className="text-sm font-medium text-slate-700">模型信息加载失败</p>
+            <p className="text-xs text-slate-400">{error}</p>
+          </div>
+        ) : (
+          <div className="flex h-40 items-center justify-center rounded-2xl bg-white shadow-sm">
+            <Spinner className="h-8 w-8 text-primary" />
+          </div>
+        )
       ) : (
         CATS.map((cat) => {
           const Icon = cat.icon

@@ -36,7 +36,7 @@ export default function VideoGen() {
   const [result, setResult] = useState(null)
   const [playing, setPlaying] = useState(false)
   const modelTouched = useRef(false)
-  const benefits = useModelBenefits()
+  const { benefits } = useModelBenefits()
 
   useEffect(() => {
     if (!benefits) return
