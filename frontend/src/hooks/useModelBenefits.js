@@ -67,7 +67,11 @@ export function resolveDefaultModel(benefits, category, fallback) {
   const manual = getDefaultModels()[category]
   if (!benefits) return manual || fallback
   const auto = pickRecommended(benefits, category)?.id
-  return manual || auto || fallback
+  if (manual) {
+    const m = modelInfo(benefits, manual)
+    if (m && isFreeValid(m)) return manual
+  }
+  return auto || fallback
 }
 
 export function formatFreeTier(m) {

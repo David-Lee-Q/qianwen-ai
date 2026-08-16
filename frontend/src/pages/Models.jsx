@@ -202,7 +202,12 @@ export default function Models() {
           const optionModels = isAudioEmpty ? [AUDIO_FALLBACK] : freeModels
           const auto = pickRecommended(benefits, cat.key)
           const autoId = auto?.id || (cat.key === 'audio' ? AUDIO_FALLBACK.id : '')
-          const current = defaults[cat.key] || autoId
+          const optionIds = new Set(optionModels.map((m) => m.id))
+          // 手动设置项若已被过滤（过期/无额度），回退到自动推荐，避免受控 select 无匹配选项而无法修改
+          const current =
+            defaults[cat.key] && optionIds.has(defaults[cat.key])
+              ? defaults[cat.key]
+              : autoId || optionModels[0]?.id || ''
           return (
             <section key={cat.key}>
               <Card className="overflow-hidden">
@@ -234,7 +239,7 @@ export default function Models() {
                         </option>
                       ))}
                     </Select>
-                    {defaults[cat.key] && custom && (
+                    {custom && defaults[cat.key] && optionIds.has(defaults[cat.key]) && (
                       <Badge color="bg-emerald-50 text-emerald-600">已手动设置</Badge>
                     )}
                   </div>
