@@ -2,7 +2,7 @@ import { useRef, useState, useEffect } from 'react'
 import { Send, Sparkles, User, RotateCcw, Cpu } from 'lucide-react'
 import { mockApi, getApiMode } from '../services/mockApi.js'
 import { Card, Select, Badge, Toggle, TypingIndicator } from '../components/ui.jsx'
-import { useModelBenefits, catModels, freeSuffix, resolveDefaultModel } from '../hooks/useModelBenefits.js'
+import { useModelBenefits, categoryModels, freeSuffix, resolveDefaultModel } from '../hooks/useModelBenefits.js'
 
 const CHAT_MODELS = [
   'qwen3.8-max',
@@ -65,11 +65,9 @@ export default function TextChat() {
   }, [benefits])
 
   const chatOptions = (() => {
-    const list = [...CHAT_MODELS]
-    for (const m of catModels(benefits, 'text')) {
-      if (m.status !== 'expire' && !list.includes(m.id)) list.push(m.id)
-    }
-    return list
+    // 与模型中心同源同序；benefits 未就绪时用硬编码兜底
+    if (!benefits) return CHAT_MODELS
+    return categoryModels(benefits, 'text').map((m) => m.id)
   })()
 
   function handleModelChange(e) {

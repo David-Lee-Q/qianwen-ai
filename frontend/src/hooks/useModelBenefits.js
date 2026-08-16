@@ -83,6 +83,19 @@ export function modelInfo(benefits, id) {
   return null
 }
 
+// 分类模型列表（与模型中心同源同序）：免费额度有效优先，同类按到期时间升序
+export function categoryModels(benefits, category) {
+  return catModels(benefits, category).slice().sort((a, b) => {
+    const av = isFreeValid(a) ? 0 : 1
+    const bv = isFreeValid(b) ? 0 : 1
+    if (av !== bv) return av - bv
+    if (isFreeValid(a) && isFreeValid(b)) {
+      return new Date(a.resetDate) - new Date(b.resetDate)
+    }
+    return 0
+  })
+}
+
 export function freeSuffix(benefits, id) {
   const m = modelInfo(benefits, id)
   if (!isFreeValid(m)) return ''
@@ -90,16 +103,14 @@ export function freeSuffix(benefits, id) {
   return d != null && d > 0 ? ` · 免费额度 ${d} 天后到期` : ''
 }
 
-// 功能页默认模型：手动配置（自定义模式）→ 系统自动推荐 → fallback
+// 功能页默认模型（与模型中心选中逻辑同源）：手动配置（分类中存在即生效）→ 系统自动推荐 → 列表首个 → fallback
 export function resolveDefaultModel(benefits, category, fallback) {
   const manual = getDefaultModels()[category]
   if (!benefits) return manual || fallback
+  if (manual && modelInfo(benefits, manual)) return manual
   const auto = pickRecommended(benefits, category)?.id
-  if (manual) {
-    const m = modelInfo(benefits, manual)
-    if (m && isFreeValid(m)) return manual
-  }
-  return auto || fallback
+  if (auto) return auto
+  return categoryModels(benefits, category)[0]?.id || fallback
 }
 
 export function formatFreeTier(m) {

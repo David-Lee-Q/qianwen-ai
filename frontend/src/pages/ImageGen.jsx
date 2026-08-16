@@ -11,7 +11,7 @@ import {
   Spinner,
   Badge,
 } from '../components/ui.jsx'
-import { useModelBenefits, pickRecommended, freeSuffix, resolveDefaultModel, catModels } from '../hooks/useModelBenefits.js'
+import { useModelBenefits, categoryModels, freeSuffix, resolveDefaultModel } from '../hooks/useModelBenefits.js'
 
 const IMAGE_MODELS = [
   { id: 'wan2.6-t2i', label: 'Wan2.6 T2I（推荐）' },
@@ -67,20 +67,14 @@ export default function ImageGen() {
   }, [benefits])
 
   const imageOptions = useMemo(() => {
-    const rec = pickRecommended(benefits, 'image')
-    const list = IMAGE_MODELS.map((m) => ({
-      ...m,
-      label: `${m.label}${freeSuffix(benefits, m.id)}${rec?.id === m.id ? '（推荐）' : ''}`,
+    // 与模型中心同源同序；benefits 未就绪时用硬编码兜底
+    const list = benefits
+      ? categoryModels(benefits, 'image')
+      : IMAGE_MODELS.map((m) => ({ id: m.id, label: m.label }))
+    return list.map((m) => ({
+      id: m.id,
+      label: `${m.label || m.id}${freeSuffix(benefits, m.id)}`,
     }))
-    for (const m of catModels(benefits, 'image')) {
-      if (m.status !== 'expire' && !list.some((x) => x.id === m.id)) {
-        list.push({
-          id: m.id,
-          label: `${m.id}${freeSuffix(benefits, m.id)}${rec?.id === m.id ? '（推荐）' : ''}`,
-        })
-      }
-    }
-    return list
   }, [benefits])
 
   async function generate() {

@@ -10,7 +10,7 @@ import {
   Badge,
   ModeRestrictedBanner,
 } from '../components/ui.jsx'
-import { useModelBenefits, pickRecommended, freeSuffix, resolveDefaultModel, catModels } from '../hooks/useModelBenefits.js'
+import { useModelBenefits, categoryModels, freeSuffix, resolveDefaultModel } from '../hooks/useModelBenefits.js'
 
 const VISION_MODELS = [
   { id: 'qwen3.7-plus', label: 'Qwen3.7 Plus（推荐）' },
@@ -47,20 +47,14 @@ export default function Vision() {
   }, [benefits])
 
   const visionOptions = useMemo(() => {
-    const rec = pickRecommended(benefits, 'vision')
-    const list = VISION_MODELS.map((m) => ({
-      ...m,
-      label: `${m.label}${freeSuffix(benefits, m.id)}${rec?.id === m.id ? '（推荐）' : ''}`,
+    // 与模型中心同源同序；benefits 未就绪时用硬编码兜底
+    const list = benefits
+      ? categoryModels(benefits, 'vision')
+      : VISION_MODELS.map((m) => ({ id: m.id, label: m.label }))
+    return list.map((m) => ({
+      id: m.id,
+      label: `${m.label || m.id}${freeSuffix(benefits, m.id)}`,
     }))
-    for (const m of catModels(benefits, 'vision')) {
-      if (m.status !== 'expire' && !list.some((x) => x.id === m.id)) {
-        list.push({
-          id: m.id,
-          label: `${m.id}${freeSuffix(benefits, m.id)}${rec?.id === m.id ? '（推荐）' : ''}`,
-        })
-      }
-    }
-    return list
   }, [benefits])
 
   function handleFile(e) {

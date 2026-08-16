@@ -21,10 +21,11 @@ import { getApiMode, getDefaultModels, setDefaultModels, mockApi } from '../serv
 import { MODELS } from '../data/models.js'
 import {
   useModelBenefits,
-  catModels,
+  categoryModels,
   isFreeValid,
   daysUntil,
   pickRecommended,
+  resolveDefaultModel,
   formatFreeTier,
 } from '../hooks/useModelBenefits.js'
 
@@ -47,18 +48,6 @@ const AUDIO_FALLBACK = {
   resetDate: null,
   context: '',
   pricing: '',
-}
-
-function sortModels(list) {
-  return [...list].sort((a, b) => {
-    const av = isFreeValid(a) ? 0 : 1
-    const bv = isFreeValid(b) ? 0 : 1
-    if (av !== bv) return av - bv
-    if (isFreeValid(a) && isFreeValid(b)) {
-      return new Date(a.resetDate) - new Date(b.resetDate)
-    }
-    return 0
-  })
 }
 
 function quotaBadge(ft) {
@@ -363,18 +352,17 @@ export default function Models({ onNavigate }) {
       ) : (
         CATS.map((cat) => {
           const Icon = cat.icon
-          // 展示该分类全部可用模型（免费额度有效或按量计费，已排除过期）
-          const availableModels = catModels(benefits, cat.key)
+          // 展示该分类全部可用模型（免费额度有效或按量计费，已排除过期），与功能页共用同一排序
+          const availableModels = categoryModels(benefits, cat.key)
           const isAudioEmpty = cat.key === 'audio' && availableModels.length === 0
           const optionModels = isAudioEmpty ? [AUDIO_FALLBACK] : availableModels
-          const auto = pickRecommended(benefits, cat.key)
-          const autoId = auto?.id || (cat.key === 'audio' ? AUDIO_FALLBACK.id : '')
           const optionIds = new Set(optionModels.map((m) => m.id))
-          // 手动设置项若已不可用，回退到自动推荐，避免受控 select 无匹配选项而无法修改
+          // 默认模型：手动设置（分类中存在）→ 自动推荐（快过期优先）→ 列表首个 → fallback
           const current =
-            defaults[cat.key] && optionIds.has(defaults[cat.key])
-              ? defaults[cat.key]
-              : autoId || optionModels[0]?.id || ''
+            resolveDefaultModel(benefits, cat.key, cat.key === 'audio' ? AUDIO_FALLBACK.id : '') ||
+            ''
+          const auto = pickRecommended(benefits, cat.key)
+          const autoId = auto?.id || ''
           return (
             <section key={cat.key}>
               <Card className="overflow-hidden">
@@ -435,7 +423,7 @@ export default function Models({ onNavigate }) {
                   </div>
                 ) : (
                   <div className="grid gap-4 p-6 lg:grid-cols-2 xl:grid-cols-3">
-                    {sortModels(availableModels).map((m) => (
+                    {availableModels.map((m) => (
                       <ModelCard key={m.id} m={m} isDefault={m.id === current} />
                     ))}
                   </div>
