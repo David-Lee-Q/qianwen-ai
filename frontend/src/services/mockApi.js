@@ -22,6 +22,21 @@ export function setApiKey(key) {
   localStorage.setItem(API_KEY_KEY, key)
 }
 
+const DEFAULT_MODELS_KEY = 'qwen_console_default_models'
+
+export function getDefaultModels() {
+  try {
+    return JSON.parse(localStorage.getItem(DEFAULT_MODELS_KEY)) || {}
+  } catch {
+    return {}
+  }
+}
+
+export function setDefaultModels(map) {
+  localStorage.setItem(DEFAULT_MODELS_KEY, JSON.stringify(map))
+  window.dispatchEvent(new CustomEvent('qwen-default-models-changed', { detail: map }))
+}
+
 // 仅自定义模型模式将 Key 写入请求头；内置模式由服务端 .env 提供
 function authHeaders() {
   const headers = { 'Content-Type': 'application/json' }
@@ -126,6 +141,17 @@ async function getHealth() {
     return await res.json()
   } catch {
     return { ok: false, keyProvided: false, serverKeyConfigured: false }
+  }
+}
+
+async function getModelBenefits() {
+  try {
+    const res = await fetch('/api/v1/models/benefits')
+    if (!res.ok) return null
+    const data = await res.json()
+    return data.available ? data : null
+  } catch {
+    return null
   }
 }
 
@@ -363,5 +389,10 @@ export const mockApi = {
       { time: '09:47', type: '视觉', detail: 'qwen3.6-plus · 截图 OCR 提取', status: '成功' },
       { time: '昨天 18:05', type: '视频', detail: 'wan2.1-t2i · 产品展示短片', status: '排队中' },
     ]
+  },
+
+  async getModelBenefits() {
+    if (isRealMode()) return getModelBenefits()
+    return null
   },
 }

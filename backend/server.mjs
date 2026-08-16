@@ -261,6 +261,123 @@ function runCli(args) {
   }
 }
 
+// ---- 免费模型额度检查：每日本地时间 04:00 自动刷新，更新推荐模型 ----
+const BENEFITS_FILE = path.resolve(__dirname, 'data/benefits.json')
+const BENEFITS_CACHE_TTL = 6 * 60 * 60 * 1000
+let modelBenefits = null
+let benefitsCheckedAt = 0
+
+function loadBenefitsCache() {
+  try {
+    if (fs.existsSync(BENEFITS_FILE)) {
+      modelBenefits = JSON.parse(fs.readFileSync(BENEFITS_FILE, 'utf8'))
+      benefitsCheckedAt = Date.now()
+    }
+  } catch {
+    modelBenefits = null
+  }
+}
+loadBenefitsCache()
+
+// 计算模型所属能力分类（一个模型可属多类）
+function capabilitiesOf(modality = {}) {
+  const out = modality.output || []
+  const inp = modality.input || []
+  const caps = []
+  if (out.includes('video')) caps.push('video')
+  if (out.includes('image')) caps.push('image')
+  if (out.includes('audio')) caps.push('audio')
+  if (out.includes('text')) caps.push('text')
+  if (out.includes('text') && (inp.includes('image') || inp.includes('video'))) {
+    caps.push('vision')
+  }
+  return caps.length ? caps : ['text']
+}
+
+const CATEGORY_LABEL = {
+  text: '文本对话',
+  image: '图像生成',
+  video: '视频生成',
+  audio: '语音合成',
+  vision: '视觉理解',
+}
+
+function isFreeValid(m) {
+  return m.canTry && m.status === 'valid' && m.resetDate && m.resetDate > new Date().toISOString()
+}
+
+// 每类默认模型：免费额度 valid 中按到期时间升序（快过期优先）
+function computeDefaults(list) {
+  const defaults = {}
+  for (const key of Object.keys(CATEGORY_LABEL)) {
+    const valid = list
+      .filter((m) => m.caps.includes(key) && isFreeValid(m))
+      .sort((a, b) => new Date(a.resetDate) - new Date(b.resetDate))
+    defaults[key] = valid[0]?.id || null
+  }
+  return defaults
+}
+
+function refreshModelBenefits() {
+  const run = runCli(['models', 'list', '--format', 'json'])
+  if (!run.ok) return { ok: false, reason: run.reason }
+  try {
+    const parsed = JSON.parse(run.stdout)
+    const list = (parsed.models || []).map((m) => {
+      const q = m.free_tier?.quota || {}
+      return {
+        id: m.id,
+        caps: capabilitiesOf(m.modality),
+        canTry: !!m.can_try,
+        status: q.status || '',
+        remaining: q.remaining ?? null,
+        total: q.total ?? null,
+        usedPct: q.used_pct ?? null,
+        resetDate: q.resetDate || null,
+        context: m.context?.context_window
+          ? `${Math.round(m.context.context_window / 1000)}K`
+          : '',
+        pricing: m.pricing?.summary?.unit || '',
+      }
+    })
+    const categories = {}
+    for (const key of Object.keys(CATEGORY_LABEL)) {
+      categories[key] = {
+        label: CATEGORY_LABEL[key],
+        models: list.filter((m) => m.caps.includes(key)),
+      }
+    }
+    modelBenefits = {
+      updatedAt: new Date().toISOString(),
+      source: 'qianwen_cli',
+      models: list,
+      categories,
+      defaults: computeDefaults(list),
+    }
+    benefitsCheckedAt = Date.now()
+    try {
+      fs.mkdirSync(path.dirname(BENEFITS_FILE), { recursive: true })
+      fs.writeFileSync(BENEFITS_FILE, JSON.stringify(modelBenefits, null, 2))
+    } catch {
+      // 缓存写入失败不阻塞
+    }
+    return { ok: true }
+  } catch {
+    return { ok: false, reason: 'parse_error' }
+  }
+}
+
+function scheduleBenefitsCheck() {
+  const now = new Date()
+  const next = new Date(now)
+  next.setHours(4, 0, 0, 0)
+  if (next <= now) next.setDate(next.getDate() + 1)
+  setTimeout(() => {
+    refreshModelBenefits()
+    scheduleBenefitsCheck()
+  }, next - now)
+}
+
 let loginCompleteRunning = false
 function startLoginComplete() {
   if (loginCompleteRunning) return
@@ -579,6 +696,16 @@ const server = http.createServer(async (req, res) => {
     return
   }
 
+  if (req.method === 'GET' && url.pathname === '/api/v1/models/benefits') {
+    if (!modelBenefits || Date.now() - benefitsCheckedAt > BENEFITS_CACHE_TTL) {
+      const r = refreshModelBenefits()
+      if (!r.ok && !modelBenefits) {
+        return sendJson(res, 200, { available: false, reason: r.reason })
+      }
+    }
+    return sendJson(res, 200, { available: true, ...modelBenefits })
+  }
+
   if (req.method === 'GET' && url.pathname === '/api/v1/usage') {
     if (isBuiltinMode(req)) return sendModeRestricted(res)
     const period = url.searchParams.get('period') || 'month'
@@ -603,4 +730,10 @@ server.listen(PORT, '0.0.0.0', () => {
   console.log(`QianWen backend listening on http://0.0.0.0:${PORT}`)
   console.log(`API key: builtin(${API_KEY ? 'configured' : 'not set'}) / custom via Authorization header`)
   console.log(`Static dir: ${DIST}`)
+  const first = refreshModelBenefits()
+  console.log(
+    `免费模型额度检查：${first.ok ? '刷新成功（' + (modelBenefits.models || []).length + ' 个模型）' : '暂不可用（' + first.reason + '），04:00 自动重试'}`,
+  )
+  scheduleBenefitsCheck()
+  console.log('已排定每日 04:00 免费模型额度自动检查')
 })

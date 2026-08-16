@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useRef, useState, useEffect, useMemo } from 'react'
 import { ScanEye, UploadCloud, ImageUp, FileText, Tag, X } from 'lucide-react'
 import { mockApi, getApiMode } from '../services/mockApi.js'
 import {
@@ -10,6 +10,7 @@ import {
   Badge,
   ModeRestrictedBanner,
 } from '../components/ui.jsx'
+import { useModelBenefits, pickRecommended, freeSuffix, resolveDefaultModel, catModels } from '../hooks/useModelBenefits.js'
 
 const VISION_MODELS = [
   { id: 'qwen3.7-plus', label: 'Qwen3.7 Plus（推荐）' },
@@ -18,13 +19,49 @@ const VISION_MODELS = [
 ]
 
 export default function Vision() {
-  const [model, setModel] = useState('qwen3.7-plus')
+  const [model, setModel] = useState(() => resolveDefaultModel(null, 'vision', 'qwen3.7-plus'))
   const [preview, setPreview] = useState(null)
   const [fileName, setFileName] = useState('')
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState(null)
   const [error, setError] = useState('')
   const fileRef = useRef(null)
+  const modelTouched = useRef(false)
+  const benefits = useModelBenefits()
+
+  useEffect(() => {
+    if (!benefits) return
+    if (modelTouched.current) return
+    const next = resolveDefaultModel(benefits, 'vision', 'qwen3.7-plus')
+    if (next) setModel(next)
+  }, [benefits])
+
+  useEffect(() => {
+    function onDefaultsChanged() {
+      if (!benefits || modelTouched.current) return
+      const next = resolveDefaultModel(benefits, 'vision', 'qwen3.7-plus')
+      if (next) setModel(next)
+    }
+    window.addEventListener('qwen-default-models-changed', onDefaultsChanged)
+    return () => window.removeEventListener('qwen-default-models-changed', onDefaultsChanged)
+  }, [benefits])
+
+  const visionOptions = useMemo(() => {
+    const rec = pickRecommended(benefits, 'vision')
+    const list = VISION_MODELS.map((m) => ({
+      ...m,
+      label: `${m.label}${freeSuffix(benefits, m.id)}${rec?.id === m.id ? '（推荐）' : ''}`,
+    }))
+    for (const m of catModels(benefits, 'vision')) {
+      if (m.status !== 'expire' && !list.some((x) => x.id === m.id)) {
+        list.push({
+          id: m.id,
+          label: `${m.id}${freeSuffix(benefits, m.id)}${rec?.id === m.id ? '（推荐）' : ''}`,
+        })
+      }
+    }
+    return list
+  }, [benefits])
 
   function handleFile(e) {
     const file = e.target.files?.[0]
@@ -109,8 +146,16 @@ export default function Vision() {
             className="hidden"
             aria-label="选择图片文件"
           />
-          <Select label="视觉模型" id="vision-model" value={model} onChange={(e) => setModel(e.target.value)}>
-            {VISION_MODELS.map((m) => (
+          <Select
+            label="视觉模型"
+            id="vision-model"
+            value={model}
+            onChange={(e) => {
+              modelTouched.current = true
+              setModel(e.target.value)
+            }}
+          >
+            {visionOptions.map((m) => (
               <option key={m.id} value={m.id}>
                 {m.label}
               </option>

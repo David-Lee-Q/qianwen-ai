@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState, useEffect, useRef } from 'react'
 import { Clapperboard, Play, Download } from 'lucide-react'
 import { mockApi, getApiMode } from '../services/mockApi.js'
 import {
@@ -11,6 +11,7 @@ import {
   Badge,
   ModeRestrictedBanner,
 } from '../components/ui.jsx'
+import { useModelBenefits, pickRecommended, freeSuffix, resolveDefaultModel, catModels } from '../hooks/useModelBenefits.js'
 
 const VIDEO_MODELS = [
   { id: 'wan2.6-t2v', label: 'Wan2.6 T2V（推荐 · 含音频）' },
@@ -29,11 +30,47 @@ const EXAMPLES = [
 
 export default function VideoGen() {
   const [prompt, setPrompt] = useState('')
-  const [model, setModel] = useState('wan2.6-t2v')
+  const [model, setModel] = useState(() => resolveDefaultModel(null, 'video', 'wan2.6-t2v'))
   const [duration, setDuration] = useState(5)
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState(null)
   const [playing, setPlaying] = useState(false)
+  const modelTouched = useRef(false)
+  const benefits = useModelBenefits()
+
+  useEffect(() => {
+    if (!benefits) return
+    if (modelTouched.current) return
+    const next = resolveDefaultModel(benefits, 'video', 'wan2.6-t2v')
+    if (next) setModel(next)
+  }, [benefits])
+
+  useEffect(() => {
+    function onDefaultsChanged() {
+      if (!benefits || modelTouched.current) return
+      const next = resolveDefaultModel(benefits, 'video', 'wan2.6-t2v')
+      if (next) setModel(next)
+    }
+    window.addEventListener('qwen-default-models-changed', onDefaultsChanged)
+    return () => window.removeEventListener('qwen-default-models-changed', onDefaultsChanged)
+  }, [benefits])
+
+  const videoOptions = useMemo(() => {
+    const rec = pickRecommended(benefits, 'video')
+    const list = VIDEO_MODELS.map((m) => ({
+      ...m,
+      label: `${m.label}${freeSuffix(benefits, m.id)}${rec?.id === m.id ? '（推荐）' : ''}`,
+    }))
+    for (const m of catModels(benefits, 'video')) {
+      if (m.status !== 'expire' && !list.some((x) => x.id === m.id)) {
+        list.push({
+          id: m.id,
+          label: `${m.id}${freeSuffix(benefits, m.id)}${rec?.id === m.id ? '（推荐）' : ''}`,
+        })
+      }
+    }
+    return list
+  }, [benefits])
 
   async function generate() {
     const p = prompt.trim()
@@ -66,8 +103,16 @@ export default function VideoGen() {
             placeholder="描述镜头、主体与画面氛围…"
             hint="建议包含主体、动作、场景与运镜"
           />
-          <Select label="模型" id="video-model" value={model} onChange={(e) => setModel(e.target.value)}>
-            {VIDEO_MODELS.map((m) => (
+          <Select
+            label="模型"
+            id="video-model"
+            value={model}
+            onChange={(e) => {
+              modelTouched.current = true
+              setModel(e.target.value)
+            }}
+          >
+            {videoOptions.map((m) => (
               <option key={m.id} value={m.id}>
                 {m.label}
               </option>

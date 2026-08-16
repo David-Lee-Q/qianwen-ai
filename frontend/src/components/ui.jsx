@@ -132,7 +132,7 @@ export function Textarea({
   )
 }
 
-export function Select({ label, children, id, ...rest }) {
+export function Select({ label, children, id, className = '', disabled, ...rest }) {
   return (
     <label className="block" htmlFor={id}>
       {label && (
@@ -142,7 +142,8 @@ export function Select({ label, children, id, ...rest }) {
       )}
       <select
         id={id}
-        className="w-full cursor-pointer rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none"
+        disabled={disabled}
+        className={`w-full cursor-pointer rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400 ${className}`}
         {...rest}
       >
         {children}

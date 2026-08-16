@@ -2,6 +2,7 @@ import { useRef, useState, useEffect } from 'react'
 import { Send, Sparkles, User, RotateCcw, Cpu } from 'lucide-react'
 import { mockApi, getApiMode } from '../services/mockApi.js'
 import { Card, Select, Badge, Toggle, TypingIndicator } from '../components/ui.jsx'
+import { useModelBenefits, catModels, freeSuffix, resolveDefaultModel } from '../hooks/useModelBenefits.js'
 
 const CHAT_MODELS = [
   'qwen3.8-max',
@@ -35,14 +36,46 @@ function typewriter(setText, fullText, onDone) {
 export default function TextChat() {
   const [messages, setMessages] = useState([])
   const [input, setInput] = useState('')
-  const [model, setModel] = useState('qwen3.7-plus')
+  const [model, setModel] = useState(() => resolveDefaultModel(null, 'text', 'qwen3.7-plus'))
   const [thinking, setThinking] = useState(true)
   const [busy, setBusy] = useState(false)
   const bottomRef = useRef(null)
+  const modelTouched = useRef(false)
+  const benefits = useModelBenefits()
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
+
+  useEffect(() => {
+    if (!benefits) return
+    if (modelTouched.current) return
+    const next = resolveDefaultModel(benefits, 'text', 'qwen3.7-plus')
+    if (next) setModel(next)
+  }, [benefits])
+
+  useEffect(() => {
+    function onDefaultsChanged() {
+      if (!benefits || modelTouched.current) return
+      const next = resolveDefaultModel(benefits, 'text', 'qwen3.7-plus')
+      if (next) setModel(next)
+    }
+    window.addEventListener('qwen-default-models-changed', onDefaultsChanged)
+    return () => window.removeEventListener('qwen-default-models-changed', onDefaultsChanged)
+  }, [benefits])
+
+  const chatOptions = (() => {
+    const list = [...CHAT_MODELS]
+    for (const m of catModels(benefits, 'text')) {
+      if (m.status !== 'expire' && !list.includes(m.id)) list.push(m.id)
+    }
+    return list
+  })()
+
+  function handleModelChange(e) {
+    modelTouched.current = true
+    setModel(e.target.value)
+  }
 
   async function send(text) {
     const content = (text ?? input).trim()
@@ -111,10 +144,11 @@ export default function TextChat() {
           </div>
         </div>
         <div className="space-y-4 p-5">
-          <Select label="模型" id="chat-model" value={model} onChange={(e) => setModel(e.target.value)}>
-            {CHAT_MODELS.map((m) => (
+          <Select label="模型" id="chat-model" value={model} onChange={handleModelChange}>
+            {chatOptions.map((m) => (
               <option key={m} value={m}>
                 {m}
+                {freeSuffix(benefits, m)}
               </option>
             ))}
           </Select>

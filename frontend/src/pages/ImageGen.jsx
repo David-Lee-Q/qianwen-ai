@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState, useEffect, useRef } from 'react'
 import { Wand2, Download, RefreshCw, Image as ImageIcon } from 'lucide-react'
 import { mockApi } from '../services/mockApi.js'
 import {
@@ -11,6 +11,7 @@ import {
   Spinner,
   Badge,
 } from '../components/ui.jsx'
+import { useModelBenefits, pickRecommended, freeSuffix, resolveDefaultModel, catModels } from '../hooks/useModelBenefits.js'
 
 const IMAGE_MODELS = [
   { id: 'wan2.6-t2i', label: 'Wan2.6 T2I（推荐）' },
@@ -38,13 +39,49 @@ const EXAMPLES = [
 export default function ImageGen() {
   const [prompt, setPrompt] = useState('')
   const [negative, setNegative] = useState('')
-  const [model, setModel] = useState('wan2.6-t2i')
+  const [model, setModel] = useState(() => resolveDefaultModel(null, 'image', 'wan2.6-t2i'))
   const [size, setSize] = useState('1024*1024')
   const [count, setCount] = useState(2)
   const [seed, setSeed] = useState('')
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState(null)
   const [error, setError] = useState('')
+  const modelTouched = useRef(false)
+  const benefits = useModelBenefits()
+
+  useEffect(() => {
+    if (!benefits) return
+    if (modelTouched.current) return
+    const next = resolveDefaultModel(benefits, 'image', 'wan2.6-t2i')
+    if (next) setModel(next)
+  }, [benefits])
+
+  useEffect(() => {
+    function onDefaultsChanged() {
+      if (!benefits || modelTouched.current) return
+      const next = resolveDefaultModel(benefits, 'image', 'wan2.6-t2i')
+      if (next) setModel(next)
+    }
+    window.addEventListener('qwen-default-models-changed', onDefaultsChanged)
+    return () => window.removeEventListener('qwen-default-models-changed', onDefaultsChanged)
+  }, [benefits])
+
+  const imageOptions = useMemo(() => {
+    const rec = pickRecommended(benefits, 'image')
+    const list = IMAGE_MODELS.map((m) => ({
+      ...m,
+      label: `${m.label}${freeSuffix(benefits, m.id)}${rec?.id === m.id ? '（推荐）' : ''}`,
+    }))
+    for (const m of catModels(benefits, 'image')) {
+      if (m.status !== 'expire' && !list.some((x) => x.id === m.id)) {
+        list.push({
+          id: m.id,
+          label: `${m.id}${freeSuffix(benefits, m.id)}${rec?.id === m.id ? '（推荐）' : ''}`,
+        })
+      }
+    }
+    return list
+  }, [benefits])
 
   async function generate() {
     const p = prompt.trim()
@@ -90,8 +127,16 @@ export default function ImageGen() {
             onChange={(e) => setNegative(e.target.value)}
             placeholder="不希望出现的内容（可选）"
           />
-          <Select label="模型" id="img-model" value={model} onChange={(e) => setModel(e.target.value)}>
-            {IMAGE_MODELS.map((m) => (
+          <Select
+            label="模型"
+            id="img-model"
+            value={model}
+            onChange={(e) => {
+              modelTouched.current = true
+              setModel(e.target.value)
+            }}
+          >
+            {imageOptions.map((m) => (
               <option key={m.id} value={m.id}>
                 {m.label}
               </option>
