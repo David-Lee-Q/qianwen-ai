@@ -6,19 +6,23 @@ export function useModelBenefits() {
   const hasKey = Boolean(getApiKey())
   const [benefits, setBenefits] = useState(null)
   const [error, setError] = useState(null)
+  const [loading, setLoading] = useState(true)
   const [nonce, setNonce] = useState(0)
   const refresh = useCallback(() => setNonce((n) => n + 1), [])
   useEffect(() => {
     let alive = true
     setBenefits(null)
     setError(null)
+    setLoading(true)
     if (mode === 'mock') {
+      setLoading(false)
       return () => {
         alive = false
       }
     }
     // 自定义模式未配置 Key：不请求，由页面引导先配置
     if (mode === 'custom' && !hasKey) {
+      setLoading(false)
       return () => {
         alive = false
       }
@@ -31,11 +35,14 @@ export function useModelBenefits() {
       .catch((e) => {
         if (alive) setError(e?.message || '模型信息加载失败')
       })
+      .finally(() => {
+        if (alive) setLoading(false)
+      })
     return () => {
       alive = false
     }
   }, [mode, hasKey, nonce])
-  return { benefits, error, mode, hasKey, refresh }
+  return { benefits, error, mode, hasKey, refresh, loading }
 }
 
 export function catModels(benefits, category) {

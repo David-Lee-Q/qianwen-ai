@@ -259,7 +259,7 @@ function ModelPasswordModal({ open, onClose, onSuccess }) {
 export default function Models({ onNavigate }) {
   const [defaults, setDefaults] = useState(getDefaultModels())
   const [pwOpen, setPwOpen] = useState(false)
-  const { benefits, error, mode, hasKey, refresh } = useModelBenefits()
+  const { benefits, error, mode, hasKey, refresh, loading } = useModelBenefits()
   const isMock = mode === 'mock'
   const custom = mode === 'custom'
   const masked = benefits?.masked === true
@@ -343,7 +343,13 @@ export default function Models({ onNavigate }) {
         </Card>
       )}
 
-      {!benefits ? (
+      {loading ? (
+        <div className="flex h-52 flex-col items-center justify-center gap-3 rounded-2xl bg-white shadow-sm">
+          <Spinner className="h-8 w-8 text-primary" />
+          <p className="text-sm font-medium text-slate-700">正在加载模型列表…</p>
+          <p className="text-xs text-slate-400">正在同步各模型免费额度与到期时间</p>
+        </div>
+      ) : !benefits ? (
         error ? (
           <div className="flex h-40 flex-col items-center justify-center gap-2 rounded-2xl bg-white shadow-sm">
             <p className="text-sm font-medium text-slate-700">模型信息加载失败</p>
